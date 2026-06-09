@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, nixvim, ... }:
 
 {
   # Home Manager needs a bit of information about you and the paths it should
@@ -73,5 +73,52 @@
   };
 
   # Let Home Manager install and manage itself.
+
+    # ===================== Nixvim 配置 =====================
+  programs.nixvim = {
+    enable = true;
+    colorschemes.catppuccin = {
+      enable = true;
+      settings = {
+        flavour = "mocha";
+        transparent_background = true;
+      };
+    };
+    plugins = {
+      nvim-treesitter.enable = true;
+      telescope.enable = true;
+      lspconfig.enable = true;
+      which-key.enable = true;
+      gitsigns.enable = true;
+      web-devicons.enable = true;
+    };
+    # 按键映射（正确格式：列表）
+    keymaps = [
+      {
+        mode = "n";
+        key = "<leader>ff";
+        action = "<cmd>Telescope find_files<cr>";
+        options.desc = "Find files";
+      }
+      {
+        mode = "n";
+        key = "<leader>fg";
+        action = "<cmd>Telescope live_grep<cr>";
+        options.desc = "Live grep";
+      }
+    ];
+    # 基本编辑器设置（放在 settings 或 extraConfigLua 中）
+    extraConfigLua = ''
+      vim.opt.number = true
+      vim.opt.relativenumber = true
+      vim.opt.tabstop = 2
+      vim.opt.shiftwidth = 2
+      vim.opt.expandtab = true
+      vim.opt.mouse = "a"
+      vim.opt.termguicolors = true
+    '';
+  };
+  # =======================================================
+
   programs.home-manager.enable = true;
 }
