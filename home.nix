@@ -77,6 +77,7 @@
     # ===================== Nixvim 配置 =====================
   programs.nixvim = {
     enable = true;
+    nixpkgs.source = pkgs.path;
     colorschemes.catppuccin = {
       enable = true;
       settings = {

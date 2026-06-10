@@ -11,7 +11,7 @@
      
     nixvim = {
       url = "github:nix-community/nixvim/nixos-26.05";  # 官方仓库
-      # inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
   };
