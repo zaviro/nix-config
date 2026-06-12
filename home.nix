@@ -96,11 +96,24 @@
     plugins = {
       treesitter.enable = true;
       telescope.enable = true;
-      lspconfig.enable = true;
       which-key.enable = true;
       gitsigns.enable = true;
       web-devicons.enable = true;
       nvim-ufo.enable = true;
+
+      # LSP 配置
+      lsp = {
+        enable = true;
+        servers = {
+          ts_ls = {
+            enable = true;                # JavaScript / TypeScript
+            filetypes = lib.mkForce [ "javascript" "javascriptreact" "typescript" "typescriptreact" ];
+          };
+          nixd.enable = true;     # Nix
+          bashls.enable = true;   # Bash
+          lua_ls.enable = true;   # Lua（Neovim 配置语言）
+        };
+      };
     };
     # ===== 基本编辑器选项 =====
     opts = {
