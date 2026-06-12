@@ -2,18 +2,20 @@
   description = "Home Manager configuration of zaviro";
 
   inputs = {
-    # Specify the source of Home Manager and Nixpkgs.
+    # Primary nixpkgs (unstable branch).
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+
+    # Home Manager (master branch, follows primary nixpkgs).
     home-manager = {
       url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-     
+
+    # NixVim — Neovim distribution (follows primary nixpkgs).
     nixvim = {
       url = "github:nix-community/nixvim/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
   };
 
   outputs =
@@ -25,18 +27,11 @@
     {
       homeConfigurations."zaviro" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-
-        # Specify your home configuration modules here, for example,
-        # the path to your home.nix.
-        modules = [ 
-          ./home.nix
+        modules = [
+          ./home-manager
           nixvim.homeModules.nixvim
         ];
-
-        # Optionally use extraSpecialArgs
-        # 传递nixvim给模块，以便配置中引用
         extraSpecialArgs = { inherit nixvim; };
-        # to pass through arguments to home.nix
       };
     };
 }
