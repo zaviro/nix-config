@@ -1,4 +1,4 @@
-{ config, pkgs, nixvim, ... }:
+{ config, lib, pkgs, nixvim, ... }:
 
 {
   # Home Manager needs a bit of information about you and the paths it should
@@ -69,7 +69,9 @@
   #  /etc/profiles/per-user/zaviro/etc/profile.d/hm-session-vars.sh
   #
   home.sessionVariables = {
-    # EDITOR = "emacs";
+    # EDITOR / VISUAL 由 nixvim 的 defaultEditor 统一管理，不在这里设置
+    UV_INDEX_URL = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple";
+    GLFW_IM_MODULE = "ibus";
   };
 
   # Let Home Manager install and manage itself.
@@ -78,22 +80,47 @@
   programs.nixvim = {
     enable = true;
     nixpkgs.source = pkgs.path;
+    # 核心：设置默认编辑器 + 社区标准别名
+    defaultEditor = true;  # 设为默认编辑器($EDITOR)
+    vimAlias = true;       # vim → nvim
+    viAlias = true;        # vi → nvim
+    # 必须在 keymaps 之前设置，否则 <leader> 会以默认的 \ 解析
+    globals.mapleader = " ";
     colorschemes.catppuccin = {
       enable = true;
       settings = {
         flavour = "mocha";
-        transparent_background = true;
+        transparent_background = false;
       };
     };
     plugins = {
-      nvim-treesitter.enable = true;
+      treesitter.enable = true;
       telescope.enable = true;
       lspconfig.enable = true;
       which-key.enable = true;
       gitsigns.enable = true;
       web-devicons.enable = true;
+      nvim-ufo.enable = true;
     };
-    # 按键映射（正确格式：列表）
+    # ===== 基本编辑器选项 =====
+    opts = {
+      number = true;            # 显示行号
+      relativenumber = true;    # 相对行号
+      tabstop = 2;              # Tab 宽度
+      shiftwidth = 2;           # 缩进宽度
+      expandtab = true;         # Tab 转空格
+      mouse = "a";              # 鼠标支持
+      termguicolors = true;     # 24-bit 真彩色
+      # Treesitter 折叠
+      foldmethod = "expr";
+      foldexpr = "v:lua.vim.treesitter.foldexpr()";
+      foldlevel = 99;
+      foldlevelstart = 99;
+      foldenable = true;
+      foldminlines = 1;
+    };
+
+    # ===== 按键映射 =====
     keymaps = [
       {
         mode = "n";
@@ -108,16 +135,108 @@
         options.desc = "Live grep";
       }
     ];
-    # 基本编辑器设置（放在 settings 或 extraConfigLua 中）
+
+    # ===== ufo 折叠快捷键（Lua API 调用，无法用 keymaps 描述） =====
     extraConfigLua = ''
-      vim.opt.number = true
-      vim.opt.relativenumber = true
-      vim.opt.tabstop = 2
-      vim.opt.shiftwidth = 2
-      vim.opt.expandtab = true
-      vim.opt.mouse = "a"
-      vim.opt.termguicolors = true
+      vim.keymap.set("n", "zR", require('ufo').openAllFolds, { desc = "展开所有折叠" })
+      vim.keymap.set("n", "zM", require('ufo').closeAllFolds, { desc = "折叠所有内容" })
+      vim.keymap.set("n", "zr", require('ufo').openFoldsExceptKinds, { desc = "展开一层折叠" })
+      vim.keymap.set("n", "zm", require('ufo').closeFoldsWith, { desc = "折叠一层" })
+      vim.keymap.set("n", "za", "za", { desc = "切换当前折叠（原生Vim键）" })
     '';
+  };
+  # =======================================================
+
+  # ===================== Zsh 配置 =====================
+  programs.zsh = {
+    enable = true;
+
+    # ===== Oh My Zsh =====
+    oh-my-zsh = {
+      enable = true;
+      theme = "robbyrussell";
+      plugins = [
+        "git"
+        "fzf"
+        "zoxide"
+      ];
+      extraConfig = ''
+        zstyle ':omz:update' mode auto
+      '';
+    };
+
+    # ===== home-manager 原生替代 Oh My Zsh 插件 =====
+    autosuggestion.enable = true;          # 替代 zsh-autosuggestions
+    syntaxHighlighting.enable = true;       # 替代 zsh-syntax-highlighting
+    historySubstringSearch.enable = true;   # 替代 history-substring-search
+    enableCompletion = true;
+
+    # ===== 历史记录 =====
+    history = {
+      size = 10000;
+      ignoreDups = true;
+      ignoreSpace = true;
+    };
+
+    # ===== Shell 别名 =====
+    shellAliases = {
+      ll = "ls -lha";
+      gs = "git status";
+      ga = "git add";
+      gc = "git commit";
+      cx = "codex";
+      oc = "opencode";
+      cc = "claude";
+      gm = "gemini";
+      ot = "openclaw tui";
+      hm = "hermes";
+      ld = "lazydocker";
+      dps = "docker ps";
+      dcu = "docker compose up -d";
+      dcd = "docker compose down";
+      ".." = "cd ..";
+      nd = "node";
+    };
+
+    # ===== 自定义脚本（initContent 替代已弃用的 initExtra / initExtraBeforeCompInit） =====
+    initContent = lib.mkMerge [
+      # mkOrder 550: 在 compinit 之前加载
+      (lib.mkOrder 550 ''
+        # zsh-autocomplete 自定义插件（必须比 compinit 早）
+        if [[ -f "$HOME/.oh-my-zsh/custom/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]]; then
+          source "$HOME/.oh-my-zsh/custom/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+        fi
+      '')
+      # 默认 order: compinit 之后
+      ''
+        # ---- API Keys ----
+        export OPENROUTER_API_KEY="REVOKED_OPENROUTER_API_KEY"
+        export TAVILY_API_KEY="REVOKED_TAVILY_API_KEY"
+
+        # ---- PATH ----
+        export BUN_INSTALL="$HOME/.bun"
+        export PATH="$HOME/.local/bin:$HOME/.browser-use-env/bin:$HOME/.opencode/bin:$BUN_INSTALL/bin:$PATH"
+
+        # ---- NVM ----
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+        # ---- Homebrew ----
+        if command -v brew >/dev/null 2>&1; then
+          eval "$(brew shellenv)"
+        fi
+
+        # ---- tmux 自动 attach ----
+        if command -v tmux >/dev/null 2>&1; then
+          if [ -z "$TMUX" ]; then
+            tmux attach -t agent || tmux new -s agent
+          fi
+        fi
+
+        # ---- bun completions ----
+        [ -s "/home/zaviro/.bun/_bun" ] && source "/home/zaviro/.bun/_bun"
+      ''
+    ];
   };
   # =======================================================
 
