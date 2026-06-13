@@ -5,8 +5,8 @@
 ```bash
 # 1. 编辑配置
 
-# 2. 代码格式化（社区规范，统一风格）
-nix fmt
+# 2. 代码格式化（alejandra，通过 home-manager 安装）
+alejandra .
 
 # 3. 前置校验：检查语法、引用错误（提前排坑）
 nix flake check
@@ -29,7 +29,10 @@ nh home switch --flake ~/nix-config
 
 # 8. 验证配置修改后系统行为符合预期
 
-# 9. 统一提交所有变更（配置代码 + 改动后的 flake.lock 一起提交）
+# 9. 文档同步（架构变更、配置项重命名、流程调整时，检查并更新 CLAUDE.md）
+#    例：outputs 结构变化、目录重组、extraSpecialArgs 调整等
+
+# 10. 统一提交所有变更（配置代码 + 改动后的 flake.lock 一起提交）
 git add .
 git commit -m "提交信息"
 ```

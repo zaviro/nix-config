@@ -19,6 +19,7 @@
   # environment.
   home.packages = with pkgs; [
     nh
+    alejandra # Nix 格式化器（替代 nix fmt，与 flake outputs 解耦）
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
     # pkgs.hello
