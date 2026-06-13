@@ -50,6 +50,6 @@ flake.nix              # 入口：3 个输入 (nixpkgs, home-manager, nixvim)
 ## 代码风格
 
 - 变量名和 Nix 语法使用英文，注释使用中文
-- 格式化工具为 alejandra（通过 `nix fmt` 调用）
+- 格式化工具为 nixfmt（通过 `nix fmt` 调用 flake formatter 输出）
 - 缩进：2 空格
 - zsh initContent 中包含 API keys（OpenRouter、Tavily）—— 修改时注意不要泄露到公开仓库

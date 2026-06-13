@@ -1,4 +1,10 @@
-{ config, lib, pkgs, nixvim, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  nixvim,
+  ...
+}:
 
 {
   # Home Manager needs a bit of information about you and the paths it should
@@ -19,7 +25,7 @@
   # environment.
   home.packages = with pkgs; [
     nh
-    alejandra # Nix 格式化器（替代 nix fmt，与 flake outputs 解耦）
+    nixfmt # Nix 官方格式化器
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
     # pkgs.hello
@@ -77,14 +83,14 @@
 
   # Let Home Manager install and manage itself.
 
-    # ===================== Nixvim 配置 =====================
+  # ===================== Nixvim 配置 =====================
   programs.nixvim = {
     enable = true;
     nixpkgs.source = pkgs.path;
     # 核心：设置默认编辑器 + 社区标准别名
-    defaultEditor = true;  # 设为默认编辑器($EDITOR)
-    vimAlias = true;       # vim → nvim
-    viAlias = true;        # vi → nvim
+    defaultEditor = true; # 设为默认编辑器($EDITOR)
+    vimAlias = true; # vim → nvim
+    viAlias = true; # vi → nvim
     # 必须在 keymaps 之前设置，否则 <leader> 会以默认的 \ 解析
     globals.mapleader = " ";
     colorschemes.catppuccin = {
@@ -107,24 +113,29 @@
         enable = true;
         servers = {
           ts_ls = {
-            enable = true;                # JavaScript / TypeScript
-            filetypes = lib.mkForce [ "javascript" "javascriptreact" "typescript" "typescriptreact" ];
+            enable = true; # JavaScript / TypeScript
+            filetypes = lib.mkForce [
+              "javascript"
+              "javascriptreact"
+              "typescript"
+              "typescriptreact"
+            ];
           };
-          nixd.enable = true;     # Nix
-          bashls.enable = true;   # Bash
-          lua_ls.enable = true;   # Lua（Neovim 配置语言）
+          nixd.enable = true; # Nix
+          bashls.enable = true; # Bash
+          lua_ls.enable = true; # Lua（Neovim 配置语言）
         };
       };
     };
     # ===== 基本编辑器选项 =====
     opts = {
-      number = true;            # 显示行号
-      relativenumber = true;    # 相对行号
-      tabstop = 2;              # Tab 宽度
-      shiftwidth = 2;           # 缩进宽度
-      expandtab = true;         # Tab 转空格
-      mouse = "a";              # 鼠标支持
-      termguicolors = true;     # 24-bit 真彩色
+      number = true; # 显示行号
+      relativenumber = true; # 相对行号
+      tabstop = 2; # Tab 宽度
+      shiftwidth = 2; # 缩进宽度
+      expandtab = true; # Tab 转空格
+      mouse = "a"; # 鼠标支持
+      termguicolors = true; # 24-bit 真彩色
       # Treesitter 折叠
       foldmethod = "expr";
       foldexpr = "v:lua.vim.treesitter.foldexpr()";
@@ -161,12 +172,11 @@
   };
   # =======================================================
 
-
   # ===================== Tmux 配置 =====================
   programs.tmux = {
     enable = true;
     mouse = true;
-    focusEvents = true;           # 替代 set-option -g focus-events on
+    focusEvents = true; # 替代 set-option -g focus-events on
     extraConfig = ''
       # 鼠标滚轮正常滚动
       bind -T copy-mode-vi WheelUpPane send-keys -X scroll-up
@@ -203,9 +213,9 @@
     };
 
     # ===== home-manager 原生替代 Oh My Zsh 插件 =====
-    autosuggestion.enable = true;          # 替代 zsh-autosuggestions
-    syntaxHighlighting.enable = true;       # 替代 zsh-syntax-highlighting
-    historySubstringSearch.enable = true;   # 替代 history-substring-search
+    autosuggestion.enable = true; # 替代 zsh-autosuggestions
+    syntaxHighlighting.enable = true; # 替代 zsh-syntax-highlighting
+    historySubstringSearch.enable = true; # 替代 history-substring-search
     enableCompletion = true;
 
     # ===== 历史记录 =====

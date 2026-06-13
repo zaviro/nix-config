@@ -6,7 +6,13 @@
 # TODO: Generate hardware-configuration.nix with `nixos-generate-config --show-hardware-config`
 #       and place it next to this file.
 
-{ inputs, lib, config, pkgs, ... }:
+{
+  inputs,
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 
 {
   imports = [

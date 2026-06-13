@@ -19,12 +19,29 @@
   };
 
   outputs =
-    { nixpkgs, home-manager, nixvim, ... }:
+    {
+      nixpkgs,
+      home-manager,
+      nixvim,
+      ...
+    }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+
+      # 适配 Nix 2.25+ 移除 nix fmt 隐式 . 参数
+      # 参考: https://git.dblsaiko.net/lix/diff/doc/manual/rl-next/nix-fmt-default-argument.md
+      nixfmt-wrapper = pkgs.writeShellApplication {
+        name = "nixfmt";
+        runtimeInputs = [ pkgs.nixfmt ];
+        text = ''
+          if [[ $# = 0 ]]; then set -- .; fi
+          exec nixfmt "$@"
+        '';
+      };
     in
     {
+      formatter.${system} = nixfmt-wrapper;
       homeConfigurations."zaviro" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [

@@ -5,8 +5,8 @@
 ```bash
 # 1. 编辑配置
 
-# 2. 代码格式化（alejandra，通过 home-manager 安装）
-alejandra .
+# 2. 代码格式化（nixfmt，通过 flake formatter 输出统一调用）
+nix fmt
 
 # 3. 前置校验：检查语法、引用错误（提前排坑）
 nix flake check
