@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 这是 zaviro 的 Nix 配置仓库，**仅在 Ubuntu 上通过 Home Manager 管理用户环境**（非 NixOS）。结构遵循 [nix-starter-configs](https://github.com/Misterio77/nix-starter-configs) 标准模板。
 
+**全局软件安装统一使用 Home Manager**（`home-manager/default.nix` 的 `home.packages`），不使用 `nix profile` 或 `nix-env`。当用户说"安装 XX 到 home"时，意为通过 Home Manager 安装。
+
 ## 编辑配置后完整流程
 
 详见 `.claude/rules/done-any-edit.md`。
