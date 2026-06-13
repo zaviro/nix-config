@@ -26,6 +26,8 @@
   home.packages = with pkgs; [
     nh
     nixfmt # Nix 官方格式化器
+    git # 版本控制
+    devenv # 可复现开发环境
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
     # pkgs.hello
