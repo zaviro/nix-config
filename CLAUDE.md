@@ -8,18 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 编辑配置后完整流程
 
-每次修改 Nix 配置后按此顺序执行（详见 `.claude/rules/done-any-edit.md`）：
-
-```bash
-nix fmt                                    # 1. 格式化
-nix flake check                            # 2. 前置校验（语法/引用）
-nix flake update                           # 3. 更新 flake.lock（或 nix flake lock --update-input <name>）
-nix flake check                            # 4. 更新后再次校验
-nh home build ~/nix-config         # 5. 预构建测试（只构建不激活）
-nh home switch ~/nix-config        # 6. 正式激活切换
-# 7. 验证配置修改后系统行为符合预期
-git add . && git commit -m "..."           # 8. 统一提交（含 flake.lock）
-```
+详见 `.claude/rules/done-any-edit.md`。
 
 ## 其他常用命令
 
