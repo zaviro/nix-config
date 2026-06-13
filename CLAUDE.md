@@ -15,8 +15,8 @@ nix fmt                                    # 1. 格式化
 nix flake check                            # 2. 前置校验（语法/引用）
 nix flake update                           # 3. 更新 flake.lock（或 nix flake lock --update-input <name>）
 nix flake check                            # 4. 更新后再次校验
-nh home build --flake ~/nix-config         # 5. 预构建测试（只构建不激活）
-nh home switch --flake ~/nix-config        # 6. 正式激活切换
+nh home build ~/nix-config         # 5. 预构建测试（只构建不激活）
+nh home switch ~/nix-config        # 6. 正式激活切换
 # 7. 验证配置修改后系统行为符合预期
 git add . && git commit -m "..."           # 8. 统一提交（含 flake.lock）
 ```
@@ -24,7 +24,7 @@ git add . && git commit -m "..."           # 8. 统一提交（含 flake.lock）
 ## 其他常用命令
 
 ```bash
-nh home switch --flake ~/nix-config   # 快速应用（无依赖变更时）
+nh home switch ~/nix-config   # 快速应用（无依赖变更时）
 nix flake show                         # 查看 flake 所有输出
 nix flake lock --update-input <name>   # 仅更新指定依赖
 ```

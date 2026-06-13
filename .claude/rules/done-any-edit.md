@@ -22,10 +22,10 @@ nix flake update
 nix flake check
 
 # 6. 预构建测试（只构建不激活，确认能正常编译）
-nh home build --flake ~/nix-config
+nh home build ~/nix-config
 
 # 7. 正式激活切换（应用新配置 + 新依赖）
-nh home switch --flake ~/nix-config
+nh home switch ~/nix-config
 
 # 8. 验证配置修改后系统行为符合预期
 
