@@ -6,9 +6,12 @@
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
-    # 首次接管同名普通文件时先保留原件，不做静默覆盖。
+    # 接管同名普通文件时保留原件；若备份已存在，激活会显式失败。
     backupFileExtension = "hm-backup";
+
+    # 只向用户模块暴露实际依赖，避免主机覆盖直接依赖完整 inputs 集合。
     extraSpecialArgs = {
+      codexPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex;
       nixvim = inputs.nixvim;
     };
 
@@ -17,13 +20,6 @@
       ./home.nix
     ];
   };
-
-  # 首次激活期间暂时保留当前系统级工具，验证后再整理软件归属。
-  environment.systemPackages = [
-    pkgs.git
-    pkgs.gh
-    inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex
-  ];
 
   networking.hostName = "legion-wsl";
 

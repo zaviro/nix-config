@@ -1,5 +1,9 @@
-{ ... }:
+{ codexPackage, pkgs, ... }:
 
 {
-  # 仅属于 WSL 用户环境的覆盖集中在此；当前先继承全部通用配置。
+  # GitHub 与 Codex 客户端目前仅在 WSL 使用，因此保留在主机覆盖层。
+  home.packages = [
+    pkgs.gh
+    codexPackage
+  ];
 }
