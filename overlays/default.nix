@@ -1,29 +1,17 @@
-# This file defines our overlays.
-# Overlays are used to customize nixpkgs, for instance to add packages or
-# change versions. They are also used to expose custom packages and unstable
-# packages to our configurations.
-#
-# See https://nixos.wiki/wiki/Overlays for more information.
+# 预留可复用的 nixpkgs overlay；当前尚未接入任何 Flake 输出。
 { inputs, ... }:
 
 {
-  # This overlay brings our custom packages from the 'pkgs' directory.
+  # 将 pkgs/ 中的自定义包暴露为普通 nixpkgs 属性。
   additions = final: _prev: import ../pkgs { pkgs = final; };
 
-  # This overlay contains whatever modifications we want to apply to nixpkgs.
-  # For example, changing versions, adding patches, setting compilation flags,
-  # or anything else you want to customize in nixpkgs.
+  # 跨主机共享的版本覆盖、补丁或编译选项统一放在此处。
   modifications = final: prev: {
-    # example = prev.example.overrideAttrs (oldAttrs: rec {
-    # ...
-    # });
+    # 示例：example = prev.example.overrideAttrs (_oldAttrs: { ... });
   };
 
-  # When using nixpkgs-unstable (current default), this overlay is equivalent
-  # to the primary nixpkgs — kept for structural consistency with the standard
-  # template. If you switch to a stable nixpkgs later, uncomment the
-  # nixpkgs-unstable input in flake.nix to keep accessing bleeding-edge packages
-  # via `pkgs.unstable`.
+  # 当前仍与主 nixpkgs 相同，仅保留未来分离稳定版和 unstable 的结构入口。
+  # 引入独立 nixpkgs-unstable input 时，必须同步修改下面的 input 引用。
   unstable-packages = final: _prev: {
     unstable = import inputs.nixpkgs {
       system = final.system;

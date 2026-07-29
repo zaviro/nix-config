@@ -1,10 +1,6 @@
-# Custom packages, that can be defined similarly to ones from nixpkgs.
-# You can build them by running:
-#   nix build .#<name>
-#
-# See https://nixos.wiki/wiki/Nixpkgs/Create_and_debug_packages for more information.
+# 自定义包的聚合入口；当前为空且尚未由 Flake 输出或 overlay 暴露。
 pkgs:
 
 {
-  # example = pkgs.callPackage ./example { };
+  # 示例：example = pkgs.callPackage ./example { };
 }
