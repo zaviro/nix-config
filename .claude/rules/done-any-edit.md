@@ -2,7 +2,13 @@
 
 ## 常规检查
 
-每次修改 Nix 配置后按以下顺序执行：
+新增文件必须先暂存，Git Flake 才会在后续求值时包含它们：
+
+```bash
+git add <new-files>
+```
+
+随后按以下顺序检查 Nix 配置：
 
 ```bash
 # 1. 格式化
@@ -10,17 +16,13 @@ nix fmt
 
 # 2. 检查空白错误和 Flake 求值
 git diff --check
+git diff --cached --check
 nix flake check
 
-# 3. 显式构建受影响的输出
+# 3. 显式构建受影响的输出；跨主机模块变更应构建全部输出
 nix build .#homeConfigurations.zaviro.activationPackage --no-link
 nix build '.#homeConfigurations."zaviro@ubuntu".activationPackage' --no-link
-```
-
-新增文件必须先暂存，Git Flake 才会在求值时包含它们：
-
-```bash
-git add <new-files>
+nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
 ```
 
 完成构建后检查实际 diff、同步架构文档，并只暂存本次提交需要的文件：
@@ -38,8 +40,17 @@ nh home build ~/nix-config
 nh home switch ~/nix-config
 ```
 
-未来加入 NixOS 主机后，还必须显式构建对应系统输出，再依次执行
-`nixos-rebuild test` 和 `nixos-rebuild switch`；具体命令应随主机接入一并补充。
+WSL 的阶段性激活按风险从低到高执行：
+
+```bash
+sudo nixos-rebuild dry-activate --flake ~/nix-config#legion-wsl
+sudo nixos-rebuild test --flake ~/nix-config#legion-wsl
+sudo nixos-rebuild switch --flake ~/nix-config
+```
+
+最终 `switch` 故意省略 `#目标`，用于验证当前 hostname 能自动选择
+`nixosConfigurations.legion-wsl`。嵌入式 Home Manager 的激活结果通过系统级
+`home-manager-zaviro.service` 检查，不使用 `systemctl --user`。
 
 ## Lock 文件策略
 
