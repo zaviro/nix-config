@@ -13,8 +13,8 @@ Ubuntu 使用 standalone Home Manager，提供两个等价输出：
 - `homeConfigurations."zaviro@ubuntu"`：与真实 hostname 对应的主机限定键。
 
 NixOS-WSL 主机提供 `nixosConfigurations."legion-wsl"`。该输出将 Home
-Manager 作为 NixOS module 接入，因此系统配置和用户配置通过同一次
-`nixos-rebuild` 激活。
+Manager 作为 NixOS module 接入，因此系统配置和用户配置会在同一次
+NixOS 激活中生效。
 
 用户级软件和偏好统一由 Home Manager 管理，不使用 `nix profile` 或
 `nix-env`。NixOS 启动、服务和系统级依赖则由对应主机的 NixOS 模块管理。
@@ -75,14 +75,23 @@ nh home switch ~/nix-config
 
 # legion-wsl
 nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
-sudo nixos-rebuild dry-activate --flake ~/nix-config#legion-wsl
-sudo nixos-rebuild test --flake ~/nix-config#legion-wsl
-sudo nixos-rebuild switch --flake ~/nix-config
+nh os build ~/nix-config
+nh os test ~/nix-config
+nh os switch ~/nix-config
 ```
 
-最后一条命令省略 `#目标`，用于验证 `legion-wsl` hostname 能自动选择同名
-`nixosConfigurations` 输出。`home-manager-zaviro.service` 是系统级服务，
-检查激活结果时不要使用 `systemctl --user`。
+两台机器都以普通用户运行 `nh`：Ubuntu 使用 `nh home`，WSL 使用
+`nh os`。后者会在系统激活阶段自动调用可用的提权工具，不得使用
+`sudo nh os`。WSL 的 Home Manager 已嵌入 NixOS，也不得单独运行
+`nh home switch`。
+
+`nh os` 默认按本机 hostname 选择 `nixosConfigurations.legion-wsl`。
+`home-manager-zaviro.service` 是系统级服务，检查激活结果时不要使用
+`systemctl --user`。仅当 `nh` 不可用时，WSL 才使用原生恢复命令：
+
+```bash
+sudo nixos-rebuild switch --flake ~/nix-config
+```
 
 只有新增、删除或主动更新 flake input 时才允许修改 `flake.lock`。目录移动、
 模块拆分和普通配置修改不得顺带更新依赖。

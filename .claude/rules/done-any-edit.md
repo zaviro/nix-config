@@ -43,14 +43,22 @@ nh home switch ~/nix-config
 WSL 的阶段性激活按风险从低到高执行：
 
 ```bash
-sudo nixos-rebuild dry-activate --flake ~/nix-config#legion-wsl
-sudo nixos-rebuild test --flake ~/nix-config#legion-wsl
-sudo nixos-rebuild switch --flake ~/nix-config
+nh os build ~/nix-config
+nh os test ~/nix-config
+nh os switch ~/nix-config
 ```
 
-最终 `switch` 故意省略 `#目标`，用于验证当前 hostname 能自动选择
-`nixosConfigurations.legion-wsl`。嵌入式 Home Manager 的激活结果通过系统级
-`home-manager-zaviro.service` 检查，不使用 `systemctl --user`。
+Ubuntu 和 WSL 都以普通用户运行 `nh`，不得使用 `sudo nh`。`nh os` 会在
+激活阶段自动提权，并按当前 hostname 选择
+`nixosConfigurations.legion-wsl`。嵌入式 Home Manager 的激活结果通过
+系统级 `home-manager-zaviro.service` 检查，不使用 `systemctl --user`。
+WSL 不得运行 `nh home switch`，因为 standalone Home 输出属于 Ubuntu。
+
+仅当 `nh` 不可用时，WSL 才使用原生恢复命令：
+
+```bash
+sudo nixos-rebuild switch --flake ~/nix-config
+```
 
 ## Lock 文件策略
 
