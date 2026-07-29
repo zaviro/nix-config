@@ -45,8 +45,7 @@
       homeConfigurations."zaviro" = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [
-          ./home-manager
-          nixvim.homeModules.nixvim
+          ./home/zaviro
         ];
         extraSpecialArgs = { inherit nixvim; };
       };
