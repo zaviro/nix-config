@@ -3,7 +3,22 @@
 {
   imports = [ ../../modules/nixos/common.nix ];
 
-  # Home Manager 接入前先原样保留当前系统级工具，确保迁移过程可恢复。
+  home-manager = {
+    useGlobalPkgs = true;
+    useUserPackages = true;
+    # 首次接管同名普通文件时先保留原件，不做静默覆盖。
+    backupFileExtension = "hm-backup";
+    extraSpecialArgs = {
+      nixvim = inputs.nixvim;
+    };
+
+    users.zaviro.imports = [
+      ../../home/zaviro
+      ./home.nix
+    ];
+  };
+
+  # 首次激活期间暂时保留当前系统级工具，验证后再整理软件归属。
   environment.systemPackages = [
     pkgs.git
     pkgs.gh
