@@ -1,38 +1,71 @@
-# 编辑配置后执行流程
+# 编辑配置后的执行流程
 
-每次修改 Nix 配置后，按以下顺序执行：
+## 常规检查
+
+每次修改 Nix 配置后按以下顺序执行：
 
 ```bash
-# 1. 编辑配置
-
-# 2. 代码格式化（nixfmt，通过 flake formatter 输出统一调用）
+# 1. 格式化
 nix fmt
 
-# 3. 前置校验：检查语法、引用错误（提前排坑）
+# 2. 检查空白错误和 Flake 求值
+git diff --check
 nix flake check
 
-# 4. 【依赖更新环节】更新 flake.lock（二选一）
-# 方案A：全量更新所有依赖（日常通用）
-nix flake update
+# 3. 显式构建受影响的输出
+nix build .#homeConfigurations.zaviro.activationPackage --no-link
+nix build '.#homeConfigurations."zaviro@ubuntu".activationPackage' --no-link
+```
 
-# 方案B：只更新指定依赖（追求稳定/局部升级，比如仅更新 home-manager）
-# nix flake lock --update-input home-manager
+新增文件必须先暂存，Git Flake 才会在求值时包含它们：
 
-# 5. 更新 lock 后再次校验（必做！防止新依赖引入兼容问题）
-nix flake check
+```bash
+git add <new-files>
+```
 
-# 6. 预构建测试（只构建不激活，确认能正常编译）
+完成构建后检查实际 diff、同步架构文档，并只暂存本次提交需要的文件：
+
+```bash
+git status --short
+git diff
+git diff --cached
+```
+
+只有阶段性节点才执行激活。Ubuntu 使用：
+
+```bash
 nh home build ~/nix-config
-
-# 7. 正式激活切换（应用新配置 + 新依赖）
 nh home switch ~/nix-config
+```
 
-# 8. 验证配置修改后系统行为符合预期
+未来加入 NixOS 主机后，还必须显式构建对应系统输出，再依次执行
+`nixos-rebuild test` 和 `nixos-rebuild switch`；具体命令应随主机接入一并补充。
 
-# 9. 文档同步（架构变更、配置项重命名、流程调整时，检查并更新 CLAUDE.md）
-#    例：outputs 结构变化、目录重组、extraSpecialArgs 调整等
+## Lock 文件策略
 
-# 10. 统一提交所有变更（配置代码 + 改动后的 flake.lock 一起提交）
-git add .
-git commit -m "提交信息"
+目录移动、模块拆分和普通选项修改不得改变 `flake.lock`。提交前应确认：
+
+```bash
+git diff -- flake.lock
+```
+
+只有明确新增或更新 input 时才运行：
+
+```bash
+# 更新指定 input
+nix flake update <input-name>
+
+# 仅在明确需要全量升级时更新全部 inputs
+nix flake update
+```
+
+依赖变更必须形成独立、可回退的提交，并在 lock 更新后重新执行完整检查和构建。
+不得把全量依赖漂移混入结构重构或主机迁移。
+
+## 提交
+
+所有检查通过后，按实际范围使用 Conventional Commits：
+
+```bash
+git commit -m "<type>(<scope>): <description>"
 ```
