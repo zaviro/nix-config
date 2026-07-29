@@ -1,17 +1,17 @@
 {
-  description = "Home Manager configuration of zaviro";
+  description = "Multi-host Nix configuration of zaviro";
 
   inputs = {
-    # Primary nixpkgs (unstable branch).
+    # Ubuntu Home Manager 使用的主软件集。
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    # Home Manager (master branch, follows primary nixpkgs).
+    # Home Manager 与 Ubuntu 的 nixpkgs 保持一致。
     home-manager = {
       url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # NixVim — Neovim distribution (follows primary nixpkgs).
+    # Nixvim 与 Ubuntu 的 nixpkgs 保持一致。
     nixvim = {
       url = "github:nix-community/nixvim/main";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -29,10 +29,12 @@
   };
 
   outputs =
-    {
+    inputs@{
       nixpkgs,
+      nixpkgs-wsl,
       home-manager,
       nixvim,
+      nixos-wsl,
       ...
     }:
     let
@@ -50,6 +52,7 @@
         '';
       };
 
+      # Ubuntu 不是 NixOS，因此继续使用 standalone Home Manager。
       ubuntuHome = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [
@@ -66,6 +69,15 @@
         # 保留旧键供现有命令使用，主机限定键用于 Ubuntu 的自动选择。
         zaviro = ubuntuHome;
         "zaviro@ubuntu" = ubuntuHome;
+      };
+
+      nixosConfigurations."legion-wsl" = nixpkgs-wsl.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; };
+        modules = [
+          nixos-wsl.nixosModules.default
+          ./hosts/legion-wsl
+        ];
       };
     };
 }
