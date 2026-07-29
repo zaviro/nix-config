@@ -39,15 +39,23 @@
           exec nixfmt "$@"
         '';
       };
-    in
-    {
-      formatter.${system} = nixfmt-wrapper;
-      homeConfigurations."zaviro" = home-manager.lib.homeManagerConfiguration {
+
+      ubuntuHome = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [
           ./home/zaviro
+          ./hosts/ubuntu/home.nix
         ];
         extraSpecialArgs = { inherit nixvim; };
+      };
+    in
+    {
+      formatter.${system} = nixfmt-wrapper;
+
+      homeConfigurations = {
+        # 保留旧键供现有命令使用，主机限定键用于 Ubuntu 的自动选择。
+        zaviro = ubuntuHome;
+        "zaviro@ubuntu" = ubuntuHome;
       };
     };
 }
