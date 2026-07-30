@@ -10,29 +10,25 @@
   };
 
   inputs = {
-    # Ubuntu Home Manager 使用的主软件集。
+    # Ubuntu 与 WSL 共享主软件集；具体版本由 flake.lock 固定。
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    # Home Manager 与 Ubuntu 的 nixpkgs 保持一致。
+    # Home Manager 与主软件集保持一致。
     home-manager = {
       url = "github:nix-community/home-manager/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Nixvim 与 Ubuntu 的 nixpkgs 保持一致。
+    # Nixvim 与主软件集保持一致。
     nixvim = {
       url = "github:nix-community/nixvim/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # 迁移期单独固定 WSL 的软件集，避免改变 Ubuntu pin 或回退当前系统。
-    nixpkgs-wsl.url = "github:NixOS/nixpkgs/624af665418d3c65d544145b4d34ad696439570e";
-
-    # 平台模块与 Codex 包保持当前 generation 使用的精确版本。
+    # 平台模块与 Codex 包独立锁定，变更时需要与主机一起验证。
     nixos-wsl = {
       url = "github:nix-community/NixOS-WSL/eaeb18da90024448a60eb1ec7132eafa4003404e";
-      # 主机由 nixpkgs-wsl 求值，平台输入无需保留另一份 nixpkgs。
-      inputs.nixpkgs.follows = "nixpkgs-wsl";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
     llm-agents = {
       url = "github:numtide/llm-agents.nix/fcd7079ff30bc4774cc2db48bcc568a42098e9b0";
@@ -43,7 +39,6 @@
   outputs =
     {
       nixpkgs,
-      nixpkgs-wsl,
       home-manager,
       nixvim,
       nixos-wsl,
@@ -81,7 +76,7 @@
 
       homeConfigurations."zaviro@ubuntu" = ubuntuHome;
 
-      nixosConfigurations."legion-wsl" = nixpkgs-wsl.lib.nixosSystem {
+      nixosConfigurations."legion-wsl" = nixpkgs.lib.nixosSystem {
         inherit system;
         # 只向 NixOS 模块树暴露实际依赖，避免主机模块耦合完整 inputs。
         specialArgs = { inherit codexPackage nixvim; };

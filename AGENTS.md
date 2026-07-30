@@ -56,9 +56,9 @@ flake.nix
 组合入口都必须通过 `extraSpecialArgs` 提供 `nixvim`。WSL 主机还单独传入
 Codex 包，避免主机覆盖依赖完整的 Flake inputs。
 
-Ubuntu 与 WSL 暂时使用不同的 nixpkgs pin：Ubuntu 保持原 Home Manager
-环境版本，WSL 保持迁移前的系统版本。只有经过两台主机验证的依赖升级才能
-主动统一这两个 pin。
+Ubuntu 与 WSL 共享根 `nixpkgs` 输入（`nixos-unstable`），具体版本由
+`flake.lock` 固定。更新该输入会影响两台主机，因此变更后必须分别验证 Ubuntu
+和 WSL 的受影响输出。
 
 ## 常用命令
 
