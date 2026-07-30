@@ -1,9 +1,10 @@
-{ lib, pkgs, ... }:
+{ lib, ... }:
 
 {
   programs.nixvim = {
     enable = true;
-    nixpkgs.source = pkgs.path;
+    # 复用 Home Manager 的包集，避免 Nixvim 再导入自身锁定的 nixpkgs。
+    nixpkgs.useGlobalPackages = true;
 
     # 同时设置默认编辑器和常用兼容别名。
     defaultEditor = true;

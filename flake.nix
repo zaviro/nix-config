@@ -37,17 +37,19 @@
   };
 
   outputs =
-    inputs@{
+    {
       nixpkgs,
       nixpkgs-wsl,
       home-manager,
       nixvim,
       nixos-wsl,
+      llm-agents,
       ...
     }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      codexPackage = llm-agents.packages.${system}.codex;
 
       # 适配 Nix 2.25+ 移除 nix fmt 隐式 . 参数
       # 参考: https://git.dblsaiko.net/lix/diff/doc/manual/rl-next/nix-fmt-default-argument.md
@@ -77,7 +79,8 @@
 
       nixosConfigurations."legion-wsl" = nixpkgs-wsl.lib.nixosSystem {
         inherit system;
-        specialArgs = { inherit inputs; };
+        # 只向 NixOS 模块树暴露实际依赖，避免主机模块耦合完整 inputs。
+        specialArgs = { inherit codexPackage nixvim; };
         modules = [
           nixos-wsl.nixosModules.default
           home-manager.nixosModules.home-manager

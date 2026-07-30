@@ -1,4 +1,4 @@
-{ inputs, pkgs, ... }:
+{ codexPackage, nixvim, ... }:
 
 {
   imports = [ ../../modules/nixos/common.nix ];
@@ -9,11 +9,7 @@
     # 接管同名普通文件时保留原件；若备份已存在，激活会显式失败。
     backupFileExtension = "hm-backup";
 
-    # 只向用户模块暴露实际依赖，避免主机覆盖直接依赖完整 inputs 集合。
-    extraSpecialArgs = {
-      codexPackage = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.codex;
-      nixvim = inputs.nixvim;
-    };
+    extraSpecialArgs = { inherit codexPackage nixvim; };
 
     users.zaviro.imports = [
       ../../home/zaviro
