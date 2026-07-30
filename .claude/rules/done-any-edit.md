@@ -104,3 +104,28 @@ nix flake update
 ```bash
 git commit -m "<type>(<scope>): <description>"
 ```
+
+## 推送
+
+提交后先确认工作区状态，并检查将要推送的提交：
+
+```bash
+git status -sb
+git log --oneline @{upstream}..HEAD
+```
+
+已有 upstream 的分支直接推送：
+
+```bash
+git push
+```
+
+新分支首次推送时显式设置 upstream：
+
+```bash
+git push -u origin "$(git branch --show-current)"
+```
+
+推送完成后再次运行 `git status -sb`，确认当前分支已与 upstream 同步。默认
+不得使用 `--force` 或 `--force-with-lease`；若远端拒绝推送，应先检查远端新增
+提交并解决分歧，不得绕过保护直接覆盖。
