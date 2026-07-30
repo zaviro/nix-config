@@ -19,10 +19,26 @@ git diff --check
 git diff --cached --check
 nix flake check
 
-# 3. 显式构建受影响的输出；跨主机模块变更应构建全部输出
+# 3. 显式求值受影响的配置；共享模块变更应覆盖所有相关配置
+nix eval '.#homeConfigurations."zaviro@ubuntu".activationPackage.drvPath'
+nix eval .#nixosConfigurations.legion-wsl.config.system.build.toplevel.drvPath
+```
+
+随后完整构建当前主机的输出。Ubuntu 使用：
+
+```bash
 nix build '.#homeConfigurations."zaviro@ubuntu".activationPackage' --no-link
+```
+
+legion-wsl 使用：
+
+```bash
 nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
 ```
+
+其他主机的输出不要求在当前机器完整构建，应由 CI、目标机器或已配置对应
+二进制缓存或远程 builder 的构建机完成。新增或更新 flake input、修改共享
+基础设施等高风险变更，要求所有受影响主机最终各完成一次完整构建。
 
 完成构建后检查实际 diff、同步架构文档，并只暂存本次提交需要的文件：
 
@@ -77,8 +93,9 @@ nix flake update <input-name>
 nix flake update
 ```
 
-依赖变更必须形成独立、可回退的提交，并在 lock 更新后重新执行完整检查和构建。
-不得把全量依赖漂移混入结构重构或主机迁移。
+依赖变更必须形成独立、可回退的提交，并在 lock 更新后重新执行完整检查。
+所有受影响主机还必须通过 CI、目标机器或具备对应缓存或远程 builder 的构建机
+各完成一次完整构建。不得把全量依赖漂移混入结构重构或主机迁移。
 
 ## 提交
 
