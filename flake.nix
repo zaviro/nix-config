@@ -65,11 +65,7 @@
     {
       formatter.${system} = nixfmt-wrapper;
 
-      homeConfigurations = {
-        # 保留旧键供现有命令使用，主机限定键用于 Ubuntu 的自动选择。
-        zaviro = ubuntuHome;
-        "zaviro@ubuntu" = ubuntuHome;
-      };
+      homeConfigurations."zaviro@ubuntu" = ubuntuHome;
 
       nixosConfigurations."legion-wsl" = nixpkgs-wsl.lib.nixosSystem {
         inherit system;

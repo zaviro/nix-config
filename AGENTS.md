@@ -7,10 +7,8 @@
 
 这是 zaviro 的多主机 Nix 配置仓库。
 
-Ubuntu 使用 standalone Home Manager，提供两个等价输出：
-
-- `homeConfigurations.zaviro`：迁移期兼容键。
-- `homeConfigurations."zaviro@ubuntu"`：与真实 hostname 对应的主机限定键。
+Ubuntu 使用 standalone Home Manager，提供与真实 hostname 对应的
+`homeConfigurations."zaviro@ubuntu"` 输出。
 
 NixOS-WSL 主机提供 `nixosConfigurations."legion-wsl"`。该输出将 Home
 Manager 作为 NixOS module 接入，因此系统配置和用户配置会在同一次
@@ -68,7 +66,6 @@ nix fmt
 nix flake check
 
 # Ubuntu
-nix build .#homeConfigurations.zaviro.activationPackage --no-link
 nix build '.#homeConfigurations."zaviro@ubuntu".activationPackage' --no-link
 nh home build ~/nix-config
 nh home switch ~/nix-config

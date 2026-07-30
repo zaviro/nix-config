@@ -20,7 +20,6 @@ git diff --cached --check
 nix flake check
 
 # 3. 显式构建受影响的输出；跨主机模块变更应构建全部输出
-nix build .#homeConfigurations.zaviro.activationPackage --no-link
 nix build '.#homeConfigurations."zaviro@ubuntu".activationPackage' --no-link
 nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
 ```
