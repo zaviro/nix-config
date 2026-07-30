@@ -29,7 +29,11 @@
     nixpkgs-wsl.url = "github:NixOS/nixpkgs/624af665418d3c65d544145b4d34ad696439570e";
 
     # 平台模块与 Codex 包保持当前 generation 使用的精确版本。
-    nixos-wsl.url = "github:nix-community/NixOS-WSL/eaeb18da90024448a60eb1ec7132eafa4003404e";
+    nixos-wsl = {
+      url = "github:nix-community/NixOS-WSL/eaeb18da90024448a60eb1ec7132eafa4003404e";
+      # 主机由 nixpkgs-wsl 求值，平台输入无需保留另一份 nixpkgs。
+      inputs.nixpkgs.follows = "nixpkgs-wsl";
+    };
     llm-agents = {
       url = "github:numtide/llm-agents.nix/fcd7079ff30bc4774cc2db48bcc568a42098e9b0";
       # llm-agents 使用独立锁定的 nixpkgs unstable，不强制跟随任一主机。
