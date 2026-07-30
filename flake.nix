@@ -1,6 +1,14 @@
 {
   description = "Multi-host Nix configuration of zaviro";
 
+  # 为本仓库使用 llm-agents 构建产物时建议 Numtide 二进制缓存。
+  nixConfig = {
+    extra-substituters = [ "https://cache.numtide.com" ];
+    extra-trusted-public-keys = [
+      "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+    ];
+  };
+
   inputs = {
     # Ubuntu Home Manager 使用的主软件集。
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -24,7 +32,7 @@
     nixos-wsl.url = "github:nix-community/NixOS-WSL/eaeb18da90024448a60eb1ec7132eafa4003404e";
     llm-agents = {
       url = "github:numtide/llm-agents.nix/fcd7079ff30bc4774cc2db48bcc568a42098e9b0";
-      # llm-agents 使用自身锁定的软件集，不强制跟随任一主机的 nixpkgs。
+      # llm-agents 使用独立锁定的 nixpkgs unstable，不强制跟随任一主机。
     };
   };
 
