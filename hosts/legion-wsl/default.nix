@@ -1,7 +1,10 @@
 { codexPackage, nixvim, ... }:
 
 {
-  imports = [ ../../modules/nixos/common.nix ];
+  imports = [
+    ../../modules/nixos/common.nix
+    ./tailscale.nix
+  ];
 
   home-manager = {
     useGlobalPkgs = true;
