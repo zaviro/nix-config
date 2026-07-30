@@ -1,5 +1,13 @@
+{ nixvim, ... }:
+
 {
-  imports = [ ../../modules/home-manager ];
+  # 组合 zaviro 在各主机间共享的 Home Manager 配置。
+  imports = [
+    nixvim.homeModules.nixvim
+    ../../modules/home-manager/packages.nix
+    ../../modules/home-manager/nixvim.nix
+    ../../modules/home-manager/tmux.nix
+  ];
 
   # 用户身份只在个人入口声明，共享模块不得写死用户名或 home 路径。
   home = {
