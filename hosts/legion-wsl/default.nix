@@ -1,7 +1,16 @@
-{ codexPackage, nixvim, ... }:
+{
+  codexPackage,
+  home-manager,
+  nixos-wsl,
+  nixvim,
+  pkgs,
+  ...
+}:
 
 {
   imports = [
+    nixos-wsl.nixosModules.default
+    home-manager.nixosModules.home-manager
     ../../modules/nixos/common.nix
     ./tailscale.nix
   ];
@@ -12,12 +21,33 @@
     # 接管同名普通文件时保留原件；若备份已存在，激活会显式失败。
     backupFileExtension = "hm-backup";
 
-    extraSpecialArgs = { inherit codexPackage nixvim; };
+    extraSpecialArgs = { inherit nixvim; };
 
-    users.zaviro.imports = [
-      ../../home/zaviro
-      ./home.nix
-    ];
+    users.zaviro = {
+      imports = [ ../../home/zaviro ];
+
+      # GitHub、Codex 与 Tailscale 客户端目前仅在 WSL 使用，因此保留在主机覆盖层。
+      home.packages = [
+        pkgs.gh
+        codexPackage
+        pkgs.tailscale
+      ];
+
+      programs.ssh = {
+        enable = true;
+
+        settings."github.com" = {
+          HostName = "ssh.github.com";
+          User = "git";
+          Port = 443;
+          IdentityFile = "~/.ssh/id_ed25519";
+          IdentitiesOnly = true;
+          AddKeysToAgent = "yes";
+        };
+      };
+
+      services.ssh-agent.enable = true;
+    };
   };
 
   networking.hostName = "legion-wsl";

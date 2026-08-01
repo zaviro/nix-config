@@ -9,7 +9,7 @@
     ../../modules/home-manager/tmux.nix
   ];
 
-  # 用户身份只在个人入口声明，共享模块不得写死用户名或 home 路径。
+  # 用户身份只在个人共享模块声明，功能模块不得写死用户名或 home 路径。
   home = {
     username = "zaviro";
     homeDirectory = "/home/zaviro";

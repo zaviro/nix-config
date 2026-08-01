@@ -27,9 +27,9 @@ flake.nix
 ├── hosts/
 │   ├── legion-wsl/
 │   │   ├── default.nix
-│   │   └── home.nix
+│   │   └── tailscale.nix
 │   └── ubuntu/
-│       └── home.nix
+│       └── default.nix
 ├── modules/
 │   ├── home-manager/
 │   │   ├── packages.nix
@@ -41,20 +41,23 @@ flake.nix
 └── pkgs/
 ```
 
-- `home/zaviro/default.nix` 是 zaviro 的跨主机 Home Manager 配置入口，声明
-  用户身份、Home Manager 状态版本并组合共享功能模块。
-- `hosts/ubuntu/home.nix` 只保存 Ubuntu 特有的用户级覆盖。
-- `hosts/legion-wsl/default.nix` 组合 WSL 系统配置与嵌入式 Home Manager。
-- `hosts/legion-wsl/home.nix` 只保存 WSL 特有的用户级软件和覆盖。
+- `hosts/<hostname>/default.nix` 是每台主机唯一的配置组装入口。
+- `hosts/ubuntu/default.nix` 组合共享用户配置与 Ubuntu 特有的用户级覆盖。
+- `hosts/legion-wsl/default.nix` 组合 WSL 平台、系统配置、嵌入式 Home
+  Manager、共享用户配置及 WSL 特有的用户级覆盖。
+- `home/zaviro/default.nix` 是 zaviro 的跨主机 Home Manager 共享配置模块，
+  声明用户身份、Home Manager 状态版本并组合共享功能模块。
 - `modules/home-manager/` 保存不写死用户名和主机名的可复用用户级功能模块，
-  由用户入口按需组合。
+  由共享用户配置模块按需组合。
 - `modules/nixos/` 只保存多台 NixOS 主机实际共享的系统模块；主机专属系统
   配置保留在对应的 `hosts/<hostname>/default.nix`。
 - `overlays/` 和 `pkgs/` 仍是占位结构，尚未接入有效输出。
 
-`home/zaviro/default.nix` 会导入 Nixvim 的 Home Manager module，因此所有
-组合入口都必须通过 `extraSpecialArgs` 提供 `nixvim`。WSL 主机还单独传入
-Codex 包，避免主机覆盖依赖完整的 Flake inputs。
+`flake.nix` 只负责依赖、输出、启动模块系统和依赖注入，不直接选择或组合具体
+配置。它通过 `specialArgs` / `extraSpecialArgs` 向主机入口提供实际依赖。
+`home/zaviro/default.nix` 会导入 Nixvim 的 Home Manager module，因此 Ubuntu
+直接注入 `nixvim`，WSL 主机则将其转交给内层 Home Manager 模块系统。WSL
+主机还单独接收 Codex 包，避免主机覆盖依赖完整的 Flake inputs。
 
 Ubuntu 与 WSL 共享根 `nixpkgs` 输入（`nixos-unstable`），具体版本由
 `flake.lock` 固定。更新该输入会影响两台主机，因此变更后必须分别验证 Ubuntu

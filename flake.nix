@@ -61,30 +61,29 @@
         '';
       };
 
-      # Ubuntu 不是 NixOS，因此继续使用 standalone Home Manager。
-      ubuntuHome = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-        modules = [
-          ./home/zaviro
-          ./hosts/ubuntu/home.nix
-        ];
-        extraSpecialArgs = { inherit nixvim; };
-      };
     in
     {
       formatter.${system} = nixfmt-wrapper;
 
-      homeConfigurations."zaviro@ubuntu" = ubuntuHome;
+      # Ubuntu 不是 NixOS，因此继续使用 standalone Home Manager。
+      homeConfigurations."zaviro@ubuntu" = home-manager.lib.homeManagerConfiguration {
+        inherit pkgs;
+        modules = [ ./hosts/ubuntu ];
+        extraSpecialArgs = { inherit nixvim; };
+      };
 
       nixosConfigurations."legion-wsl" = nixpkgs.lib.nixosSystem {
         inherit system;
         # 只向 NixOS 模块树暴露实际依赖，避免主机模块耦合完整 inputs。
-        specialArgs = { inherit codexPackage nixvim; };
-        modules = [
-          nixos-wsl.nixosModules.default
-          home-manager.nixosModules.home-manager
-          ./hosts/legion-wsl
-        ];
+        specialArgs = {
+          inherit
+            codexPackage
+            home-manager
+            nixos-wsl
+            nixvim
+            ;
+        };
+        modules = [ ./hosts/legion-wsl ];
       };
     };
 }
