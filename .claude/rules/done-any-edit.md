@@ -75,6 +75,32 @@ WSL 不得运行 `nh home switch`，因为 standalone Home 输出属于 Ubuntu�
 sudo nixos-rebuild switch --flake ~/nix-config
 ```
 
+## 跨机器验证
+
+两台主机位于同一 tailnet，当前 Tailscale 地址与 Tailscale SSH 状态如下：
+
+| 主机 | Tailscale IPv4 | Tailscale SSH | 状态 |
+| --- | --- | --- | --- |
+| Ubuntu | `100.65.7.4` | `ssh zaviro@100.65.7.4` | `RunSSH = false`，当前不能作为 Tailscale SSH 目标 |
+| legion-wsl | `100.109.1.84` | `ssh zaviro@100.109.1.84` | `RunSSH = true`，已验证可用 |
+
+在 Ubuntu 完成配置编辑并推送后，可通过 legion-wsl 的 Tailscale SSH 入口测试
+跨机器拉取、构建和激活。远端写入前先确认仓库干净，并只允许快进拉取：
+
+```bash
+ssh zaviro@100.109.1.84
+git -C ~/nix-config status -sb
+git -C ~/nix-config pull --ff-only
+nh os build ~/nix-config
+nh os test ~/nix-config
+nh os switch ~/nix-config
+systemctl is-active home-manager-zaviro.service
+```
+
+Ubuntu 的地址用于记录反向验证目标，但在单独启用并验证 Tailscale SSH 前不得
+将其视为可用入口。Tailscale SSH 仅可从获准的 tailnet 客户端访问，并仍受
+tailnet SSH 策略约束。
+
 ## Lock 文件策略
 
 目录移动、模块拆分和普通选项修改不得改变 `flake.lock`。提交前应确认：
