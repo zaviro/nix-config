@@ -2,6 +2,7 @@
   codexPackage,
   disko,
   home-manager,
+  lib,
   nixvim,
   pkgs,
   ...
@@ -37,6 +38,14 @@
     networkmanager.enable = true;
   };
 
+  # 优先使用国内镜像下载 Nix 构建产物，未命中时回退到官方缓存。
+  nix.settings.substituters = [
+    "https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store"
+  ];
+
+  # Chrome 是非自由软件，只为该包开放求值许可。
+  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "google-chrome" ];
+
   boot.loader = {
     timeout = 3;
     efi.canTouchEfiVariables = true;
@@ -53,6 +62,12 @@
   };
 
   time.timeZone = "Asia/Shanghai";
+
+  services = {
+    xserver.enable = true;
+    displayManager.gdm.enable = true;
+    desktopManager.gnome.enable = true;
+  };
 
   i18n = {
     defaultLocale = "en_US.UTF-8";
@@ -98,6 +113,7 @@
   };
 
   environment.systemPackages = with pkgs; [
+    google-chrome
     git
     vim
     curl
