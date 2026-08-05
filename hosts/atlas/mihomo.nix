@@ -4,7 +4,7 @@
     enable = true;
     configFile = "/home/zaviro/clash/config.yaml";
 
-    # 首次部署不授予 TUN 权限，确认本机代理可用后再单独启用透明代理。
-    tunMode = false;
+    # TUN 模式需要 systemd 服务访问虚拟网卡并管理自动路由。
+    tunMode = true;
   };
 }
