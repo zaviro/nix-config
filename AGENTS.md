@@ -12,11 +12,18 @@ Ubuntu 使用 standalone Home Manager，提供与真实 hostname 对应的
 
 NixOS 主机提供 `nixosConfigurations."legion-wsl"` 和
 `nixosConfigurations.atlas`。两个输出都将 Home Manager 作为 NixOS module
-接入，因此系统配置和用户配置会在同一次 NixOS 激活中生效。atlas 是物理主机，
-其磁盘布局由主机目录中的 Disko 声明记录。
+接入，因此系统配置和用户配置会在同一次 NixOS 激活中生效。atlas 是日常使用的
+主力物理机，其磁盘布局由主机目录中的 Disko 声明记录。
 
 用户级软件和偏好统一由 Home Manager 管理，不使用 `nix profile` 或
 `nix-env`。NixOS 启动、服务和系统级依赖则由对应主机的 NixOS 模块管理。
+
+## 主机操作范围
+
+除非用户明确要求跨机器修改或验证，否则在任意机器上工作时只管理当前机器的
+配置：只编辑该主机的专属配置，只求值和构建该主机对应的 Flake 输出，也只在
+该主机执行激活。不得顺带修改、构建、激活或通过 SSH 操作其他机器。共享模块的
+修改会影响多台机器，因此必须先取得用户对跨机器变更范围的明确要求。
 
 ## 架构
 
@@ -152,3 +159,7 @@ sudo nixos-rebuild switch --flake ~/nix-config
 | `chore` | 其他维护工作 |
 
 description 使用英文，并确保每个提交只描述其实际 diff。
+
+任何改动成功完成并通过必要检查后，都必须创建本地提交。提交前应核对工作区，
+仅暂存本次任务涉及的文件，不得把用户已有或无关的改动带入提交；除非用户明确
+要求，否则不推送远端。
