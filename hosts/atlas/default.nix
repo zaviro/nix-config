@@ -56,6 +56,17 @@
     };
   };
 
+  # DATA 是 atlas 的常用数据盘；按 UUID 挂载，避免设备名变化导致挂载错盘。
+  fileSystems."/mnt/data" = {
+    device = "/dev/disk/by-uuid/000839b1-7b82-4c8d-8691-c5758e41ab31";
+    fsType = "btrfs";
+    options = [
+      "compress=zstd:1"
+      "nofail"
+      "x-systemd.automount"
+    ];
+  };
+
   hardware = {
     cpu.intel.updateMicrocode = true;
     enableRedistributableFirmware = true;
