@@ -22,6 +22,7 @@ nix flake check
 # 3. 显式求值受影响的配置；共享模块变更应覆盖所有相关配置
 nix eval '.#homeConfigurations."zaviro@ubuntu".activationPackage.drvPath'
 nix eval .#nixosConfigurations.legion-wsl.config.system.build.toplevel.drvPath
+nix eval .#nixosConfigurations.atlas.config.system.build.toplevel.drvPath
 ```
 
 随后完整构建当前主机的输出。Ubuntu 使用：
@@ -36,7 +37,13 @@ legion-wsl 使用：
 nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
 ```
 
-其他主机的输出不要求在当前机器完整构建，应由 CI、目标机器或已配置对应
+atlas 使用：
+
+```bash
+nix build .#nixosConfigurations.atlas.config.system.build.toplevel --no-link
+```
+
+如果当前机器无法承担其他主机的完整构建，应由 CI、目标机器或已配置对应
 二进制缓存或远程 builder 的构建机完成。新增或更新 flake input、修改共享
 基础设施等高风险变更，要求所有受影响主机最终各完成一次完整构建。
 
@@ -63,26 +70,39 @@ nh os test ~/nix-config
 nh os switch ~/nix-config
 ```
 
-Ubuntu 和 WSL 都以普通用户运行 `nh`，不得使用 `sudo nh`。`nh os` 会在
-激活阶段自动提权，并按当前 hostname 选择
-`nixosConfigurations.legion-wsl`。嵌入式 Home Manager 的激活结果通过
-系统级 `home-manager-zaviro.service` 检查，不使用 `systemctl --user`。
-WSL 不得运行 `nh home switch`，因为 standalone Home 输出属于 Ubuntu。
+atlas 使用同样的风险顺序：
 
-仅当 `nh` 不可用时，WSL 才使用原生恢复命令：
+```bash
+nh os build ~/nix-config
+nh os test ~/nix-config
+nh os switch ~/nix-config
+```
+
+三台主机都以普通用户运行 `nh`，不得使用 `sudo nh`。`nh os` 会在激活阶段
+自动提权，并按当前 hostname 选择对应的 `nixosConfigurations` 输出。嵌入式
+Home Manager 的激活结果通过系统级 `home-manager-zaviro.service` 检查，不使用
+`systemctl --user`。NixOS 主机不得运行 `nh home switch`，因为 standalone
+Home 输出属于 Ubuntu。
+
+仅当 `nh` 不可用时，NixOS 主机才使用原生恢复命令：
 
 ```bash
 sudo nixos-rebuild switch --flake ~/nix-config
 ```
 
+普通构建、`test` 和 `switch` 都不会执行 atlas 的 Disko 脚本。不得把 Disko
+脚本执行加入日常激活流程；格式化仍需单独核对磁盘并取得明确确认。
+
 ## 跨机器验证
 
-两台主机位于同一 tailnet，当前 Tailscale 地址与 Tailscale SSH 状态如下：
+Ubuntu 与 legion-wsl 位于同一 tailnet；atlas 当前只确认了局域网 SSH，尚未
+配置 Tailscale：
 
-| 主机 | Tailscale IPv4 | Tailscale SSH | 状态 |
+| 主机 | 已验证地址 | SSH 入口 | 状态 |
 | --- | --- | --- | --- |
 | Ubuntu | `100.65.7.4` | `ssh zaviro@100.65.7.4` | `RunSSH = false`，当前不能作为 Tailscale SSH 目标 |
-| legion-wsl | `100.109.1.84` | `ssh zaviro@100.109.1.84` | `RunSSH = true`，已验证可用 |
+| legion-wsl | `100.109.1.84` | `ssh zaviro@100.109.1.84` | Tailscale SSH 已验证可用 |
+| atlas | `192.168.0.100` | `ssh zaviro@192.168.0.100` | 路由器静态 DHCP 分配，公钥 SSH 已验证可用 |
 
 在 Ubuntu 完成配置编辑并推送后，可通过 legion-wsl 的 Tailscale SSH 入口测试
 跨机器拉取、构建和激活。远端写入前先确认仓库干净，并只允许快进拉取：
@@ -100,6 +120,10 @@ systemctl is-active home-manager-zaviro.service
 Ubuntu 的地址用于记录反向验证目标，但在单独启用并验证 Tailscale SSH 前不得
 将其视为可用入口。Tailscale SSH 仅可从获准的 tailnet 客户端访问，并仍受
 tailnet SSH 策略约束。
+
+atlas 初次迁移可由 WSL 本地构建并通过 SSH 复制闭包，不要求 atlas 直接访问
+GitHub。临时网络隧道不得写成永久系统代理；停止隧道前应确保目标主机没有依赖
+对应 loopback 端口的持久配置。
 
 ## Lock 文件策略
 

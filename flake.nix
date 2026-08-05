@@ -13,6 +13,15 @@
     # Ubuntu 与 WSL 共享主软件集；具体版本由 flake.lock 固定。
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # atlas 暂时保持安装完成时验证过的软件集，避免迁移导致隐式回退。
+    nixpkgs-atlas.url = "github:NixOS/nixpkgs/e72e4f299401a3689d4b3d5fc6496b11db7064eb";
+
+    # atlas 的文件系统与 swap 继续由安装时验证过的 Disko 声明提供。
+    disko = {
+      url = "github:nix-community/disko/ff8702b4de27f72b4c78573dfb89ec74e36abdf1";
+      inputs.nixpkgs.follows = "nixpkgs-atlas";
+    };
+
     # Home Manager 与主软件集保持一致。
     home-manager = {
       url = "github:nix-community/home-manager/master";
@@ -38,7 +47,9 @@
 
   outputs =
     {
+      disko,
       nixpkgs,
+      nixpkgs-atlas,
       home-manager,
       nixvim,
       nixos-wsl,
@@ -84,6 +95,22 @@
             ;
         };
         modules = [ ./hosts/legion-wsl ];
+      };
+
+      nixosConfigurations.atlas = nixpkgs-atlas.lib.nixosSystem {
+        inherit system;
+        specialArgs = {
+          inherit
+            codexPackage
+            disko
+            home-manager
+            nixvim
+            ;
+
+          diskDevice = "/dev/disk/by-id/nvme-eui.0000000000000000a428b700fe430003";
+          swapSize = "64G";
+        };
+        modules = [ ./hosts/atlas ];
       };
     };
 }
