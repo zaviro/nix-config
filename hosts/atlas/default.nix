@@ -30,6 +30,100 @@
 
       # Codex 只在实际开发主机上安装，避免扩大 Ubuntu 的共享闭包。
       home.packages = [ codexPackage ];
+
+      # 静态配置由 Home Manager 接管，Rime 方案和用户词库仍保留为可写数据。
+      xdg.configFile = {
+        "fcitx5/profile".text = ''
+          [Groups/0]
+          Name=默认
+          Default Layout=us
+          DefaultIM=rime
+
+          [Groups/0/Items/0]
+          Name=rime
+          Layout=
+
+          [GroupOrder]
+          0=默认
+        '';
+
+        "fcitx5/config".text = ''
+          [Hotkey]
+          EnumerateWithTriggerKeys=True
+          AltTriggerKeys=
+          EnumerateForwardKeys=
+          EnumerateBackwardKeys=
+          EnumerateSkipFirst=False
+
+          [Hotkey/TriggerKeys]
+          0=Zenkaku_Hankaku
+          1=Hangul
+
+          [Hotkey/EnumerateGroupForwardKeys]
+          0=Super+space
+
+          [Hotkey/EnumerateGroupBackwardKeys]
+          0=Shift+Super+space
+
+          [Hotkey/ActivateKeys]
+          0=Hangul_Hanja
+
+          [Hotkey/DeactivateKeys]
+          0=Hangul_Romaja
+
+          [Hotkey/PrevPage]
+          0=Up
+
+          [Hotkey/NextPage]
+          0=Down
+
+          [Hotkey/PrevCandidate]
+          0=Shift+Tab
+
+          [Hotkey/NextCandidate]
+          0=Tab
+
+          [Hotkey/TogglePreedit]
+          0=Control+Alt+P
+
+          [Behavior]
+          ActiveByDefault=False
+          ShareInputState=All
+          PreeditEnabledByDefault=True
+          ShowInputMethodInformation=True
+          showInputMethodInformationWhenFocusIn=False
+          CompactInputMethodInformation=True
+          ShowFirstInputMethodInformation=True
+          DefaultPageSize=5
+          OverrideXkbOption=False
+          CustomXkbOption=
+          EnabledAddons=
+          DisabledAddons=
+          PreloadInputMethod=True
+          AllowInputMethodForPassword=False
+          ShowPreeditForPassword=False
+          AutoSavePeriod=30
+        '';
+
+        "fcitx5/conf/classicui.conf".text = ''
+          Vertical Candidate List=False
+          WheelForPaging=True
+          Font="Sans Serif 15"
+          MenuFont="Sans 10"
+          TrayFont="Sans Bold 10"
+          Theme=default-dark
+          DarkTheme=default-dark
+          UseDarkTheme=False
+          UseAccentColor=True
+          EnableFractionalScale=True
+        '';
+
+        "fcitx5/conf/notifications.conf".text = ''
+          [HiddenNotifications]
+          0=fcitx-rime-deploy
+          1=wayland-diagnose-gnome
+        '';
+      };
     };
   };
 
@@ -83,11 +177,11 @@
   i18n = {
     defaultLocale = "en_US.UTF-8";
 
-    # 当前 TTY 不使用输入法；未来图形会话通过 XDG autostart 启动 Fcitx5。
+    # GNOME 由系统层选择 Fcitx5 以禁用默认 IBus，用户偏好交给 Home Manager。
     inputMethod = {
       enable = true;
       type = "fcitx5";
-      fcitx5.addons = [ pkgs.qt6Packages.fcitx5-chinese-addons ];
+      fcitx5.addons = [ pkgs.fcitx5-rime ];
     };
   };
 
