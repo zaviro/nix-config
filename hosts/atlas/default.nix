@@ -14,6 +14,7 @@
     ../../modules/nixos/common.nix
     ./disko.nix
     ./hardware-configuration.nix
+    ./mihomo.nix
   ];
 
   home-manager = {
