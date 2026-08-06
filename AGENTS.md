@@ -109,8 +109,13 @@ sudo nixos-rebuild switch --flake ~/nix-config
 用于描述 atlas 的既有布局；除非是经过单独核对和确认的重装或恢复任务，不得
 执行 Disko 生成的脚本。
 
-只有新增、删除或主动更新 flake input 时才允许修改 `flake.lock`。目录移动、
-模块拆分和普通配置修改不得顺带更新依赖。
+更改 input 拓扑（新增、删除、URL 或 `follows` 关系）后，必须运行
+`nix flake lock`，使 `flake.lock` 与 `flake.nix` 同步；该命令不得用于隐式升级
+已有依赖。只有任务明确要求更新、升级、最新版本或指定 revision 时，才运行
+`nix flake update <input-name>` 或 `nix flake lock --update-input <input-name>`。
+依赖升级必须独立提交并完成必要验证。`nixos-unstable` 是输入分支，实际使用的
+提交始终以 `flake.lock` 为准，不会随构建自动更新。目录移动、模块拆分和普通
+配置修改不得顺带更新依赖。
 
 ## 代码风格
 

@@ -105,13 +105,15 @@ sudo nixos-rebuild switch --flake ~/nix-config
 
 ## Lock 文件策略
 
-目录移动、模块拆分和普通选项修改不得改变 `flake.lock`。提交前应确认：
+目录移动、模块拆分和普通选项修改不得改变 `flake.lock`。更改 input 拓扑
+（新增、删除、URL 或 `follows` 关系）后，必须运行 `nix flake lock`，使锁文件
+与 `flake.nix` 同步；不得借此隐式升级已有依赖。提交前应确认：
 
 ```bash
 git diff -- flake.lock
 ```
 
-只有明确新增或更新 input 时才运行：
+只有任务明确要求更新、升级、最新版本或指定 revision 时，才运行：
 
 ```bash
 # 更新指定 input
@@ -121,9 +123,10 @@ nix flake update <input-name>
 nix flake update
 ```
 
-依赖变更必须形成独立、可回退的提交，并在 lock 更新后重新执行完整检查。
-所有受影响主机还必须通过 CI、目标机器或具备对应缓存或远程 builder 的构建机
-各完成一次完整构建。不得把全量依赖漂移混入结构重构或主机迁移。
+`nixos-unstable` 是输入分支，实际使用的提交始终以 `flake.lock` 为准，不会随
+构建自动更新。依赖升级必须形成独立、可回退的提交，并在 lock 更新后重新执行
+完整检查。所有受影响主机还必须通过 CI、目标机器或具备对应缓存或远程 builder
+的构建机各完成一次完整构建。不得把全量依赖漂移混入结构重构或主机迁移。
 
 ## 提交
 
