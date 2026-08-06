@@ -1,7 +1,7 @@
 # AGENTS.md
 
 本文件说明仓库约束。具体编辑完成流程见
-`.claude/rules/done-any-edit.md`。
+`.agents/skills/done-any-edit/SKILL.md`。
 
 ## 概述
 
