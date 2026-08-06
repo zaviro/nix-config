@@ -36,7 +36,7 @@
     "disko": {
       "inputs": {
         "nixpkgs": [
-          "nixpkgs-atlas"
+          "nixpkgs"
         ]
       },
       "locked": {
@@ -194,29 +194,13 @@
         "type": "github"
       }
     },
-    "nixpkgs-atlas": {
+    "nixpkgs_2": {
       "locked": {
         "lastModified": 1785828668,
         "narHash": "sha256-8fsyqeO+mJqvIzeO4xIpgJe/f7MTbbVTEC6RT6WSXNs=",
         "owner": "NixOS",
         "repo": "nixpkgs",
         "rev": "e72e4f299401a3689d4b3d5fc6496b11db7064eb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "e72e4f299401a3689d4b3d5fc6496b11db7064eb",
-        "type": "github"
-      }
-    },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1781074563,
-        "narHash": "sha256-md8WlXOlfnIeHeOScMTTHFyf2d6iaTwPl2apR5EQ3P4=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "9ae611a455b90cf061d8f332b977e387bda8e1ca",
         "type": "github"
       },
       "original": {
@@ -256,7 +240,6 @@
         "llm-agents": "llm-agents",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs_2",
-        "nixpkgs-atlas": "nixpkgs-atlas",
         "nixvim": "nixvim"
       }
     },

@@ -66,10 +66,9 @@ flake.nix
 主机将其转交给内层 Home Manager 模块系统。legion-wsl 和 atlas 单独接收 Codex
 包，避免主机覆盖依赖完整的 Flake inputs。
 
-legion-wsl 使用根 `nixpkgs` 输入（`nixos-unstable`），具体版本由 `flake.lock`
-固定。atlas 暂时使用 `nixpkgs-atlas` 固定在首次安装时验证过的 revision；Disko
-跟随该输入。共享 Home Manager 与 Nixvim 仍由根输入锁定，因此更新共享用户模块
-时两台主机都需要求值验证。
+两台主机统一使用根 `nixpkgs` 输入（`nixos-unstable`），具体版本由 `flake.lock`
+固定。Disko 自身固定在安装时验证过的 revision，并跟随根软件集。共享 Home
+Manager 与 Nixvim 也跟随根输入，因此更新共享用户模块时两台主机都需要求值验证。
 
 ## 常用命令
 
