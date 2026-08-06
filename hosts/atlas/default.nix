@@ -26,6 +26,12 @@
     autoStart = true;
   };
 
+  # 国内网络通过本机 Clash 访问 Tailscale 控制面；Tailnet 的 UDP 数据路径不受影响。
+  systemd.services.tailscaled.environment = {
+    HTTP_PROXY = "http://127.0.0.1:7897";
+    HTTPS_PROXY = "http://127.0.0.1:7897";
+  };
+
   # 将 Zsh 注册为系统 shell，随后可安全地设为 zaviro 的登录 shell。
   programs.zsh.enable = true;
 
