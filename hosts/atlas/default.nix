@@ -52,6 +52,9 @@
         readest
         rustdesk
         spotify
+        python3
+        nodejs_24
+        bun
       ];
 
       programs = {
