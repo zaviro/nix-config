@@ -24,6 +24,9 @@
     autoStart = true;
   };
 
+  # 将 Zsh 注册为系统 shell，随后可安全地设为 zaviro 的登录 shell。
+  programs.zsh.enable = true;
+
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
@@ -36,6 +39,74 @@
 
       # Codex 只在实际开发主机上安装，避免扩大跨主机共享闭包。
       home.packages = [ codexPackage ];
+
+      programs = {
+        # 交互式 shell 由 Home Manager 生成，避免维护可变的 ~/.oh-my-zsh 克隆。
+        zsh = {
+          enable = true;
+          enableCompletion = true;
+          autosuggestion = {
+            enable = true;
+            strategy = [ "history" ];
+          };
+          syntaxHighlighting.enable = true;
+          history = {
+            ignoreAllDups = true;
+            ignoreSpace = true;
+            share = true;
+          };
+          historySubstringSearch.enable = true;
+          oh-my-zsh = {
+            enable = true;
+            # zoxide 使用其 Home Manager 集成，避免与 Oh My Zsh 插件重复初始化。
+            plugins = [
+              "git"
+              "fzf"
+            ];
+          };
+          shellAliases = {
+            ll = "ls -lha";
+            gs = "git status";
+            ga = "git add";
+            gc = "git commit";
+            cx = "codex";
+            oc = "opencode";
+            cc = "claude";
+            gm = "gemini";
+            ot = "openclaw tui";
+            hm = "hermes";
+            ld = "lazydocker";
+            dps = "docker ps";
+            dcu = "docker compose up -d";
+            dcd = "docker compose down";
+            ".." = "cd ..";
+            nd = "node";
+          };
+        };
+
+        # zoxide 已作为共享工具提供；此处只为 atlas 的 Zsh 启用集成。
+        zoxide = {
+          enable = true;
+          enableZshIntegration = true;
+        };
+
+        ghostty = {
+          enable = true;
+          enableZshIntegration = true;
+          settings.fullscreen = true;
+        };
+      };
+
+      # GNOME 的默认终端设置及 XDG 终端 scheme 都指向 Ghostty。
+      dconf.settings."org/gnome/desktop/default-applications/terminal" = {
+        exec = "ghostty";
+        exec-arg = "";
+      };
+
+      xdg.mimeApps = {
+        enable = true;
+        defaultApplications."x-scheme-handler/terminal" = [ "com.mitchellh.ghostty.desktop" ];
+      };
 
       # Clash Verge 的全局增强文件位于应用数据目录，其他运行时数据保持可写。
       xdg.dataFile = {
@@ -216,6 +287,7 @@
     zaviro = {
       isNormalUser = true;
       uid = 1000;
+      shell = pkgs.zsh;
       extraGroups = [
         "wheel"
         "networkmanager"
