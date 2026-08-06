@@ -46,6 +46,14 @@ atlas 使用：
 nix build .#nixosConfigurations.atlas.config.system.build.toplevel --no-link
 ```
 
+完整构建必须确认目标 `toplevel` 输出已实际实现于 store，不能仅以
+`drvPath` 求值成功作为构建通过。例如：
+
+```bash
+system_toplevel="$(nix build .#nixosConfigurations.atlas.config.system.build.toplevel --no-link --print-out-paths)"
+nix path-info "$system_toplevel"
+```
+
 如果当前机器无法承担其他主机的完整构建，应由 CI、目标机器或已配置对应
 二进制缓存或远程 builder 的构建机完成。新增或更新 flake input、修改共享
 基础设施等高风险变更，要求所有受影响主机最终各完成一次完整构建。
@@ -60,6 +68,15 @@ git diff --cached
 
 默认不得执行 `nh os test`。它会立即临时激活新配置，可能中断网络、图形会话、
 服务或正在运行的任务；只有用户明确要求运行时测试或授权临时激活时才能运行。
+在请求或执行授权的临时激活前，必须先确认新 `toplevel` 输出已实际实现。若修改
+`nixpkgs`、内核、systemd、NetworkManager、显示管理器、桌面会话或 Home Manager
+输入，还必须在目标机器比较当前与新系统闭包：
+
+```bash
+nix store diff-closures /run/current-system "$system_toplevel"
+```
+
+差异包含上述系统栈组件时，须先向用户报告风险并再次确认，才可执行临时激活。
 若获得授权，WSL 的阶段性激活按风险从低到高执行，并且只能在目标机器运行：
 
 ```bash
