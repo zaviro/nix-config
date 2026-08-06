@@ -28,8 +28,8 @@ nix eval .#nixosConfigurations.atlas.config.system.build.toplevel.drvPath
 
 | 修改范围 | 必需验证 |
 | --- | --- |
-| `hosts/atlas/**` | atlas 求值和完整构建；需要激活时先执行 `nh os test` |
-| `hosts/legion-wsl/**` | legion-wsl 求值和完整构建；只在目标机器激活 |
+| `hosts/atlas/**` | atlas 求值和完整构建 |
+| `hosts/legion-wsl/**` | legion-wsl 求值和完整构建 |
 | `home/**`、`modules/home-manager/**` | 两个 NixOS 输出求值，当前 atlas 完整构建 |
 | `modules/nixos/**` 或共享输入接线 | 两个 NixOS 输出求值，并最终分别完整构建 |
 | 纯文档、注释或格式调整 | 空白检查；无需 Nix 求值、构建或激活 |
@@ -58,14 +58,16 @@ git diff
 git diff --cached
 ```
 
-WSL 的阶段性激活按风险从低到高执行，并且只能在目标机器运行：
+默认不得执行 `nh os test`。它会立即临时激活新配置，可能中断网络、图形会话、
+服务或正在运行的任务；只有用户明确要求运行时测试或授权临时激活时才能运行。
+若获得授权，WSL 的阶段性激活按风险从低到高执行，并且只能在目标机器运行：
 
 ```bash
 nh os test ~/nix-config
 nh os switch ~/nix-config
 ```
 
-atlas 的运行时行为可能受影响时，先临时激活并检查结果：
+若用户明确授权 atlas 临时激活，先执行并检查结果：
 
 ```bash
 nh os test ~/nix-config
@@ -73,7 +75,7 @@ systemctl --failed
 systemctl is-active home-manager-zaviro.service
 ```
 
-测试通过且本次任务明确要求持久激活时再执行：
+临时激活检查通过且本次任务明确要求持久激活时再执行：
 
 ```bash
 nh os switch ~/nix-config

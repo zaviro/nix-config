@@ -79,19 +79,23 @@ nix flake check
 
 # atlas
 nix build .#nixosConfigurations.atlas.config.system.build.toplevel --no-link
+# 仅在用户明确授权临时激活或持久激活时运行
 nh os test ~/nix-config
 nh os switch ~/nix-config
 
 # legion-wsl
 nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
+# 仅在用户明确授权临时激活或持久激活时运行
 nh os test ~/nix-config
 nh os switch ~/nix-config
 ```
 
 两台机器都以普通用户运行 `nh os`。它会在系统激活阶段自动调用可用的提权工具，
 不得使用 `sudo nh os`。Home Manager 已嵌入系统，也不得单独运行
-`nh home switch`。仅在运行时行为可能受影响时执行 `nh os test`；测试通过且任务
-明确要求持久激活时才执行 `nh os switch`。纯文档、注释或格式修改无需激活。
+`nh home switch`。默认验证仅包含格式化、求值和构建。`nh os test` 会立即临时
+激活新配置，可能中断网络、图形会话、服务或正在运行的任务；只有用户明确要求
+运行时测试或授权临时激活时才能执行。测试后仅在任务明确要求持久生效时才执行
+`nh os switch`。纯文档、注释或格式修改无需激活。
 
 `nh os` 默认按本机 hostname 选择对应的 `nixosConfigurations` 输出。
 `home-manager-zaviro.service` 是系统级服务，检查激活结果时不要使用
