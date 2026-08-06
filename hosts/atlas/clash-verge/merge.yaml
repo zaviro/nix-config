@@ -27,12 +27,6 @@ dns:
   fallback-filter:
     geoip: true
     geoip-code: CN
-  nameserver-policy:
-    "*.ts.net": 100.100.100.100
-    "*.tailscale.com": 100.100.100.100
-    "controlplane.tailscale.com": 100.100.100.100
-    "login.tailscale.com": 100.100.100.100
-
 prepend-rules:
   - DOMAIN,localhost,DIRECT
   - DOMAIN-SUFFIX,local,DIRECT
@@ -47,7 +41,5 @@ prepend-rules:
   - IP-CIDR6,::1/128,DIRECT,no-resolve
   - IP-CIDR6,fc00::/7,DIRECT,no-resolve
   - IP-CIDR6,fe80::/10,DIRECT,no-resolve
-  - DOMAIN-SUFFIX,ts.net,DIRECT
-  - DOMAIN-SUFFIX,tailscale.com,DIRECT
   - DST-PORT,22,DIRECT
   - IP-CIDR,17.0.0.0/8,DIRECT,no-resolve
