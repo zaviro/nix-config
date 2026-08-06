@@ -300,6 +300,18 @@
     ];
   };
 
+  # 挂载数据盘后将其根目录交给 zaviro；盘内已有文件的权限保持不变。
+  systemd.services.set-data-mount-owner = {
+    description = "Set the data mount owner";
+    wantedBy = [ "multi-user.target" ];
+    unitConfig.RequiresMountsFor = "/mnt/data";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.coreutils}/bin/chown zaviro:users /mnt/data";
+      RemainAfterExit = true;
+    };
+  };
+
   hardware = {
     cpu.intel.updateMicrocode = true;
     enableRedistributableFirmware = true;
