@@ -229,6 +229,18 @@
     };
   };
 
+  security.sudo.extraRules = [
+    {
+      users = [ "zaviro" ];
+      commands = [
+        {
+          command = "/run/current-system/sw/bin/systemctl";
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
+
   environment.systemPackages = with pkgs; [
     google-chrome
     git
