@@ -301,17 +301,7 @@
     };
   };
 
-  security.sudo.extraRules = [
-    {
-      users = [ "zaviro" ];
-      commands = [
-        {
-          command = "/run/current-system/sw/bin/systemctl";
-          options = [ "NOPASSWD" ];
-        }
-      ];
-    }
-  ];
+  security.sudo.wheelNeedsPassword = false;
 
   environment.systemPackages = with pkgs; [
     google-chrome
