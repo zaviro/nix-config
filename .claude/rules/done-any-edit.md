@@ -1,4 +1,4 @@
-# 编辑配置后的执行流程
+# 编辑后的执行流程
 
 ## 常规检查
 
@@ -8,7 +8,7 @@
 git add <new-files>
 ```
 
-随后按以下顺序检查 Nix 配置：
+纯文档修改只需执行空白检查。Nix 配置发生变化时，按以下顺序检查：
 
 ```bash
 # 1. 格式化
@@ -20,18 +20,21 @@ git diff --cached --check
 nix flake check
 
 # 3. 显式求值受影响的配置；共享模块变更应覆盖所有相关配置
-nix eval '.#homeConfigurations."zaviro@ubuntu".activationPackage.drvPath'
 nix eval .#nixosConfigurations.legion-wsl.config.system.build.toplevel.drvPath
 nix eval .#nixosConfigurations.atlas.config.system.build.toplevel.drvPath
 ```
 
-随后完整构建当前主机的输出。Ubuntu 使用：
+验证范围根据实际 diff 确定：
 
-```bash
-nix build '.#homeConfigurations."zaviro@ubuntu".activationPackage' --no-link
-```
+| 修改范围 | 必需验证 |
+| --- | --- |
+| `hosts/atlas/**` | atlas 求值和完整构建；需要激活时先执行 `nh os test` |
+| `hosts/legion-wsl/**` | legion-wsl 求值和完整构建；只在目标机器激活 |
+| `home/**`、`modules/home-manager/**` | 两个 NixOS 输出求值，当前 atlas 完整构建 |
+| `modules/nixos/**` 或共享输入接线 | 两个 NixOS 输出求值，并最终分别完整构建 |
+| 纯文档、注释或格式调整 | 空白检查；无需 Nix 求值、构建或激活 |
 
-legion-wsl 使用：
+legion-wsl 的完整构建命令：
 
 ```bash
 nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
@@ -55,34 +58,32 @@ git diff
 git diff --cached
 ```
 
-只有阶段性节点才执行激活。Ubuntu 使用：
+WSL 的阶段性激活按风险从低到高执行，并且只能在目标机器运行：
 
 ```bash
-nh home build ~/nix-config
-nh home switch ~/nix-config
-```
-
-WSL 的阶段性激活按风险从低到高执行：
-
-```bash
-nh os build ~/nix-config
 nh os test ~/nix-config
 nh os switch ~/nix-config
 ```
 
-atlas 使用同样的风险顺序：
+atlas 的运行时行为可能受影响时，先临时激活并检查结果：
 
 ```bash
-nh os build ~/nix-config
 nh os test ~/nix-config
+systemctl --failed
+systemctl is-active home-manager-zaviro.service
+```
+
+测试通过且本次任务明确要求持久激活时再执行：
+
+```bash
 nh os switch ~/nix-config
 ```
 
-三台主机都以普通用户运行 `nh`，不得使用 `sudo nh`。`nh os` 会在激活阶段
+两台主机都以普通用户运行 `nh`，不得使用 `sudo nh`。`nh os` 会在激活阶段
 自动提权，并按当前 hostname 选择对应的 `nixosConfigurations` 输出。嵌入式
 Home Manager 的激活结果通过系统级 `home-manager-zaviro.service` 检查，不使用
-`systemctl --user`。NixOS 主机不得运行 `nh home switch`，因为 standalone
-Home 输出属于 Ubuntu。
+`systemctl --user`。NixOS 主机不得运行 `nh home switch`。纯文档、注释或格式
+修改不需要执行 `nh os test` 或 `nh os switch`。
 
 仅当 `nh` 不可用时，NixOS 主机才使用原生恢复命令：
 
@@ -95,35 +96,10 @@ sudo nixos-rebuild switch --flake ~/nix-config
 
 ## 跨机器验证
 
-Ubuntu 与 legion-wsl 位于同一 tailnet；atlas 当前只确认了局域网 SSH，尚未
-配置 Tailscale：
-
-| 主机 | 已验证地址 | SSH 入口 | 状态 |
-| --- | --- | --- | --- |
-| Ubuntu | `100.65.7.4` | `ssh zaviro@100.65.7.4` | `RunSSH = false`，当前不能作为 Tailscale SSH 目标 |
-| legion-wsl | `100.109.1.84` | `ssh zaviro@100.109.1.84` | Tailscale SSH 已验证可用 |
-| atlas | `192.168.0.100` | `ssh zaviro@192.168.0.100` | 路由器静态 DHCP 分配，公钥 SSH 已验证可用 |
-
-在 Ubuntu 完成配置编辑并推送后，可通过 legion-wsl 的 Tailscale SSH 入口测试
-跨机器拉取、构建和激活。远端写入前先确认仓库干净，并只允许快进拉取：
-
-```bash
-ssh zaviro@100.109.1.84
-git -C ~/nix-config status -sb
-git -C ~/nix-config pull --ff-only
-nh os build ~/nix-config
-nh os test ~/nix-config
-nh os switch ~/nix-config
-systemctl is-active home-manager-zaviro.service
-```
-
-Ubuntu 的地址用于记录反向验证目标，但在单独启用并验证 Tailscale SSH 前不得
-将其视为可用入口。Tailscale SSH 仅可从获准的 tailnet 客户端访问，并仍受
-tailnet SSH 策略约束。
-
-atlas 初次迁移可由 WSL 本地构建并通过 SSH 复制闭包，不要求 atlas 直接访问
-GitHub。临时网络隧道不得写成永久系统代理；停止隧道前应确保目标主机没有依赖
-对应 loopback 端口的持久配置。
+默认只管理当前 atlas。legion-wsl 专属修改可以在 atlas 求值或构建对应输出，
+但不得从 atlas 远程写入或激活 legion-wsl，除非用户明确要求跨机器操作。共享
+模块变更最终应由目标机器、CI 或已配置对应缓存或远程 builder 的构建机完成各自
+的完整构建。
 
 ## Lock 文件策略
 
@@ -157,7 +133,8 @@ git commit -m "<type>(<scope>): <description>"
 
 ## 推送
 
-提交后先确认工作区状态，并检查将要推送的提交：
+只有用户明确要求推送、发布或创建 PR 时才执行本节。提交后先确认工作区状态，
+并检查将要推送的提交：
 
 ```bash
 git status -sb

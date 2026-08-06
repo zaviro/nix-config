@@ -10,7 +10,7 @@
   };
 
   inputs = {
-    # Ubuntu 与 WSL 共享主软件集；具体版本由 flake.lock 固定。
+    # legion-wsl 与仓库 formatter 使用根软件集；具体版本由 flake.lock 固定。
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
     # atlas 暂时保持安装完成时验证过的软件集，避免迁移导致隐式回退。
@@ -75,13 +75,6 @@
     in
     {
       formatter.${system} = nixfmt-wrapper;
-
-      # Ubuntu 不是 NixOS，因此继续使用 standalone Home Manager。
-      homeConfigurations."zaviro@ubuntu" = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-        modules = [ ./hosts/ubuntu ];
-        extraSpecialArgs = { inherit nixvim; };
-      };
 
       nixosConfigurations."legion-wsl" = nixpkgs.lib.nixosSystem {
         inherit system;

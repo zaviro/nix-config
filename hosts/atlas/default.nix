@@ -34,7 +34,7 @@
     users.zaviro = {
       imports = [ ../../home/zaviro ];
 
-      # Codex 只在实际开发主机上安装，避免扩大 Ubuntu 的共享闭包。
+      # Codex 只在实际开发主机上安装，避免扩大跨主机共享闭包。
       home.packages = [ codexPackage ];
 
       # Clash Verge 的全局增强文件位于应用数据目录，其他运行时数据保持可写。
