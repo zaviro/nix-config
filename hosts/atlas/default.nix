@@ -15,8 +15,14 @@
     ../../modules/nixos/common.nix
     ./disko.nix
     ./hardware-configuration.nix
-    ./mihomo.nix
   ];
+
+  programs.clash-verge = {
+    enable = true;
+    serviceMode = true;
+    tunMode = true;
+    autoStart = true;
+  };
 
   home-manager = {
     useGlobalPkgs = true;
@@ -30,6 +36,12 @@
 
       # Codex 只在实际开发主机上安装，避免扩大 Ubuntu 的共享闭包。
       home.packages = [ codexPackage ];
+
+      # Clash Verge 的全局增强文件位于应用数据目录，其他运行时数据保持可写。
+      xdg.dataFile = {
+        "io.github.clash-verge-rev.clash-verge-rev/profiles/Merge.yaml".source = ./clash-verge/merge.yaml;
+        "io.github.clash-verge-rev.clash-verge-rev/profiles/Script.js".source = ./clash-verge/script.js;
+      };
 
       # 静态配置由 Home Manager 接管，Rime 方案和用户词库仍保留为可写数据。
       xdg.configFile = {
