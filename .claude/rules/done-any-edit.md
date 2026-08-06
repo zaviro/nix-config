@@ -120,6 +120,16 @@ sudo nixos-rebuild switch --flake ~/nix-config
 模块变更最终应由目标机器、CI 或已配置对应缓存或远程 builder 的构建机完成各自
 的完整构建。
 
+两台主机已通过 Tailscale SSH 使用下列简短主机名：
+
+```bash
+tailscale ssh zaviro@atlas
+tailscale ssh zaviro@legion-wsl
+```
+
+仅当用户明确要求通过 SSH 访问另一台主机时，才可使用这些命令；不得将其用于
+日常验证、构建、激活或未授权的跨机器操作。
+
 ## Lock 文件策略
 
 目录移动、模块拆分和普通选项修改不得改变 `flake.lock`。更改 input 拓扑
