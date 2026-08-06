@@ -1,4 +1,4 @@
-# Profile Enhancement Merge Template for Clash Verge
+# Clash Verge Rev 全局扩展配置：本机路由、DNS 与 Tailscale。
 
 profile:
   store-selected: true
@@ -10,6 +10,7 @@ tun:
     - fd7a:115c:a1e0::/48
 
 dns:
+  enable: true
   listen: 127.0.0.1:1053
   respect-rules: true
   default-nameserver:
@@ -27,19 +28,5 @@ dns:
   fallback-filter:
     geoip: true
     geoip-code: CN
-prepend-rules:
-  - DOMAIN,localhost,DIRECT
-  - DOMAIN-SUFFIX,local,DIRECT
-  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
-  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
-  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
-  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
-  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
-  - IP-CIDR,100.100.100.100/32,DIRECT,no-resolve
-  - IP-CIDR6,fd7a:115c:a1e0::/48,DIRECT,no-resolve
-  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
-  - IP-CIDR6,::1/128,DIRECT,no-resolve
-  - IP-CIDR6,fc00::/7,DIRECT,no-resolve
-  - IP-CIDR6,fe80::/10,DIRECT,no-resolve
-  - DST-PORT,22,DIRECT
-  - IP-CIDR,17.0.0.0/8,DIRECT,no-resolve
+  nameserver-policy:
+    "*.ts.net": 100.100.100.100
