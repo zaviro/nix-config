@@ -3,7 +3,6 @@
   home-manager,
   nixos-wsl,
   nixvim,
-  pkgs,
   ...
 }:
 
@@ -12,7 +11,7 @@
     nixos-wsl.nixosModules.default
     home-manager.nixosModules.home-manager
     ../../modules/nixos/common.nix
-    ./tailscale.nix
+    ../../modules/nixos/tailscale.nix
   ];
 
   home-manager = {
@@ -26,11 +25,7 @@
     users.zaviro = {
       imports = [ ../../home/zaviro ];
 
-      # Codex 与 Tailscale 客户端目前仅在 WSL 使用，因此保留在主机覆盖层。
-      home.packages = [
-        codexPackage
-        pkgs.tailscale
-      ];
+      home.packages = [ codexPackage ];
 
       programs.ssh = {
         enable = true;

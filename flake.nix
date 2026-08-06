@@ -55,6 +55,7 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      claudeCodePackage = llm-agents.packages.${system}.claude-code;
       codexPackage = llm-agents.packages.${system}.codex;
 
       # 适配 Nix 2.25+ 移除 nix fmt 隐式 . 参数
@@ -90,6 +91,7 @@
         inherit system;
         specialArgs = {
           inherit
+            claudeCodePackage
             codexPackage
             disko
             home-manager

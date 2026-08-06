@@ -1,4 +1,5 @@
 {
+  claudeCodePackage,
   codexPackage,
   disko,
   home-manager,
@@ -13,6 +14,7 @@
     disko.nixosModules.disko
     home-manager.nixosModules.home-manager
     ../../modules/nixos/common.nix
+    ../../modules/nixos/tailscale.nix
     ./disko.nix
     ./hardware-configuration.nix
   ];
@@ -27,6 +29,10 @@
   # 将 Zsh 注册为系统 shell，随后可安全地设为 zaviro 的登录 shell。
   programs.zsh.enable = true;
 
+  programs.steam.enable = true;
+
+  virtualisation.docker.enable = true;
+
   home-manager = {
     useGlobalPkgs = true;
     useUserPackages = true;
@@ -37,8 +43,16 @@
     users.zaviro = {
       imports = [ ../../home/zaviro ];
 
-      # Codex 只在实际开发主机上安装，避免扩大跨主机共享闭包。
-      home.packages = [ codexPackage ];
+      # 图形客户端与 Agent 仅在 atlas 安装，避免扩大其他主机闭包。
+      home.packages = with pkgs; [
+        claudeCodePackage
+        codexPackage
+        firefox
+        obsidian
+        readest
+        rustdesk
+        spotify
+      ];
 
       programs = {
         # 交互式 shell 由 Home Manager 生成，避免维护可变的 ~/.oh-my-zsh 克隆。
@@ -220,8 +234,17 @@
     "https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store"
   ];
 
-  # Chrome 是非自由软件，只为该包开放求值许可。
-  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "google-chrome" ];
+  # 仅为实际使用的非自由桌面软件开放求值许可。
+  nixpkgs.config.allowUnfreePredicate =
+    pkg:
+    builtins.elem (lib.getName pkg) [
+      "google-chrome"
+      "libsciter"
+      "obsidian"
+      "spotify"
+      "steam"
+      "steam-unwrapped"
+    ];
 
   boot.loader = {
     timeout = 3;
@@ -289,6 +312,7 @@
       uid = 1000;
       shell = pkgs.zsh;
       extraGroups = [
+        "docker"
         "wheel"
         "networkmanager"
         "video"
