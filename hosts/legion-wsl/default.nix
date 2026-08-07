@@ -3,6 +3,7 @@
   home-manager,
   nixos-wsl,
   nixvim,
+  pkgs,
   ...
 }:
 
@@ -45,6 +46,26 @@
   };
 
   networking.hostName = "legion-wsl";
+
+  # WSL 磁盘空间较小：仅保留最近 5 个系统代际，再回收不再引用的 Store 内容。
+  systemd.services.nix-gc-keep-generations = {
+    description = "Keep the latest 5 NixOS system generations";
+
+    serviceConfig.Type = "oneshot";
+
+    script = ''
+      ${pkgs.nix}/bin/nix-env \\
+        --profile /nix/var/nix/profiles/system \\
+        --delete-generations +5
+      ${pkgs.nix}/bin/nix-collect-garbage
+    '';
+  };
+
+  # 不补跑错过的清理，避免启动 WSL 后立即产生额外 I/O。
+  systemd.timers.nix-gc-keep-generations = {
+    wantedBy = [ "timers.target" ];
+    timerConfig.OnCalendar = "weekly";
+  };
 
   wsl = {
     enable = true;
