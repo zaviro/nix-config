@@ -14,32 +14,13 @@
     disko.nixosModules.disko
     home-manager.nixosModules.home-manager
     ../../modules/nixos/common.nix
+    ../../modules/nixos/gc.nix
     ../../modules/nixos/tailscale.nix
     ./disko.nix
     ./hardware-configuration.nix
   ];
 
-  # 定期删除系统 profile 中最近 10 个之外的代际，再回收失去引用的 Store 内容。
-  systemd.services.nix-gc-keep-generations = {
-    description = "Keep the latest 10 NixOS system generations";
-
-    serviceConfig.Type = "oneshot";
-
-    script = ''
-      ${pkgs.nix}/bin/nix-env \
-        --profile /nix/var/nix/profiles/system \
-        --delete-generations +10
-      ${pkgs.nix}/bin/nix-collect-garbage
-    '';
-  };
-
-  systemd.timers.nix-gc-keep-generations = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "weekly";
-      Persistent = true;
-    };
-  };
+  services.nix-generation-cleanup.keepGenerations = 10;
 
   nix.optimise.automatic = true;
 
