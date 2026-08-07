@@ -82,7 +82,6 @@
         readest
         rustdesk
         spotify
-        vscode
         python3
         nodejs_24
         bun
@@ -278,7 +277,6 @@
       "spotify"
       "steam"
       "steam-unwrapped"
-      "vscode"
     ];
 
   boot.loader = {
