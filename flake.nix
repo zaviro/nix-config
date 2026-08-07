@@ -37,7 +37,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     llm-agents = {
-      url = "github:numtide/llm-agents.nix/fcd7079ff30bc4774cc2db48bcc568a42098e9b0";
+      url = "github:numtide/llm-agents.nix";
       # llm-agents 使用独立锁定的 nixpkgs unstable，不强制跟随任一主机。
     };
   };
