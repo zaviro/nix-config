@@ -6,7 +6,6 @@
     # Nix 与开发基础工具。
     nh
     nixfmt
-    git
     devenv
 
     # Agent、脚本和 Nixvim 都直接受益的非交互工具。

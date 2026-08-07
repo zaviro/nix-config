@@ -5,6 +5,7 @@
   imports = [
     nixvim.homeModules.nixvim
     ../../modules/home-manager/packages.nix
+    ../../modules/home-manager/git.nix
     ../../modules/home-manager/nixvim.nix
     ../../modules/home-manager/tmux.nix
   ];
