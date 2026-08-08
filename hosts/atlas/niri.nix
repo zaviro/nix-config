@@ -45,6 +45,11 @@ in
   # 导致其枚举不到 sessionData.desktops 里的会话文件（gnome.desktop 等），
   # 登录界面不显示「选择会话」齿轮。所有桌面模块（GNOME/niri/Hyprland/Cosmic）
   # 都会汇入同一个 desktops 包，此处通过 GDM env.d 注入一次即覆盖全部会话。
+  #
+  # 注意：此修复是 GDM 专属。SDDM 的 NixOS 模块直接以
+  # X11.SessionDir / Wayland.SessionDir 指向 sessionData.desktops，
+  # 不走 XDG_DATA_DIRS，天然可见全部会话——换用 SDDM 时需连同
+  # services.displayManager.gdm.enable 一起移除本文件。
   environment.etc."gdm/env.d/00-session-dirs.env".text = ''
     XDG_DATA_DIRS=${config.services.displayManager.sessionData.desktops}/share:$XDG_DATA_DIRS
   '';
