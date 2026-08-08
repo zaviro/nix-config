@@ -72,6 +72,30 @@
                   "noatime"
                 ];
               };
+
+              "@log" = {
+                mountpoint = "/var/log";
+                mountOptions = [
+                  "compress=zstd:1"
+                  "noatime"
+                ];
+              };
+
+              "@snapshots-root" = {
+                mountpoint = "/.snapshots";
+                mountOptions = [
+                  "compress=zstd:1"
+                  "noatime"
+                ];
+              };
+
+              "@snapshots-home" = {
+                mountpoint = "/home/.snapshots";
+                mountOptions = [
+                  "compress=zstd:1"
+                  "noatime"
+                ];
+              };
             };
           };
         };

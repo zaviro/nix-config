@@ -259,6 +259,9 @@
     };
   };
 
+  # 让 /var/log 挂载在启动早期可用，保证启动阶段的日志也写入独立子卷。
+  fileSystems."/var/log".neededForBoot = true;
+
   # DATA 是 atlas 的常用数据盘；按 UUID 挂载，避免设备名变化导致挂载错盘。
   fileSystems."/mnt/data" = {
     device = "/dev/disk/by-uuid/000839b1-7b82-4c8d-8691-c5758e41ab31";
@@ -281,6 +284,21 @@
     xserver.enable = true;
     displayManager.gdm.enable = true;
     desktopManager.gnome.enable = true;
+  };
+
+  # SUBVOLUME 指被快照的子卷路径，Snapper 固定使用其下名为 .snapshots 的子卷。
+  services.snapper.configs = {
+    root = {
+      SUBVOLUME = "/";
+      TIMELINE_CREATE = true;
+      TIMELINE_CLEANUP = true;
+    };
+
+    home = {
+      SUBVOLUME = "/home";
+      TIMELINE_CREATE = true;
+      TIMELINE_CLEANUP = true;
+    };
   };
 
   i18n = {
