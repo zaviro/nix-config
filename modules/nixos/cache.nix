@@ -13,7 +13,7 @@
   nix.settings.trusted-public-keys = [
     # 官方缓存签名
     "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-    # Numtide 缓存签名
-    "numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+    # Numtide 缓存签名（真实签名名 niks3.numtide.com-1，与 flake.nix 一致）
+    "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
   ];
 }
