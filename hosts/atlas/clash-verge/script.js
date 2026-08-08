@@ -16,6 +16,16 @@ const CUSTOM_RULES = [
   "DOMAIN-SUFFIX,wenku8.net,DIRECT",
 ];
 
+// Tailscale 控制面与 DERP 直连，避免其流量经代理往返；
+// tailnet 网段已由 merge.yaml 的 route-exclude-address 排除出 TUN。
+const TAILSCALE_RULES = [
+  "DOMAIN-SUFFIX,tailscale.com,DIRECT",
+  "DOMAIN-SUFFIX,tailscale.io,DIRECT",
+  "DOMAIN-SUFFIX,ts.net,DIRECT",
+  "IP-CIDR,192.200.0.0/16,DIRECT,no-resolve",
+  "IP-CIDR6,fd7a:115c:a1e0::/48,DIRECT,no-resolve",
+];
+
 const RULESET_BASE =
   "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/";
 
@@ -107,7 +117,7 @@ const INFRA_RULES = [
   "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve",
 ];
 
-const MANAGED_RULES = INFRA_RULES.concat(CUSTOM_RULES, [
+const MANAGED_RULES = INFRA_RULES.concat(TAILSCALE_RULES, CUSTOM_RULES, [
   "RULE-SET,ai," + GROUP.AI,
   "RULE-SET,openai," + GROUP.AI,
   "RULE-SET,github," + GROUP.PROXY,
@@ -136,7 +146,14 @@ function main(config, profileName) {
 
   const dns = (config.dns ??= {});
   const filter = dns["fake-ip-filter"] ?? [];
-  dns["fake-ip-filter"] = [...new Set([...filter, "+.ts.net"])];
+  dns["fake-ip-filter"] = [
+    ...new Set([
+      ...filter,
+      "+.tailscale.com",
+      "+.tailscale.io",
+      "+.ts.net",
+    ]),
+  ];
 
   config.mode = "rule";
   config["proxy-groups"] = PROXY_GROUPS;
