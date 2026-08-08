@@ -13,9 +13,9 @@
     # 两台主机与仓库 formatter 统一使用根软件集；具体版本由 flake.lock 固定。
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    # atlas 的文件系统与 swap 继续由安装时验证过的 Disko 声明提供。
+    # Disko 跟随默认分支，nixpkgs 与主软件集保持一致。
     disko = {
-      url = "github:nix-community/disko/ff8702b4de27f72b4c78573dfb89ec74e36abdf1";
+      url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
