@@ -18,6 +18,7 @@
     ../../modules/nixos/tailscale.nix
     ./disko.nix
     ./hardware-configuration.nix
+    ./niri.nix
   ];
 
   services.nix-generation-cleanup.keepGenerations = 10;
