@@ -237,11 +237,6 @@
     networkmanager.enable = true;
   };
 
-  # 优先使用国内镜像下载 Nix 构建产物，未命中时回退到官方缓存。
-  nix.settings.substituters = [
-    "https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store"
-  ];
-
   # 仅为实际使用的非自由桌面软件开放求值许可。
   nixpkgs.config.allowUnfreePredicate =
     pkg:
