@@ -287,17 +287,37 @@
   };
 
   # SUBVOLUME 指被快照的子卷路径，Snapper 固定使用其下名为 .snapshots 的子卷。
-  services.snapper.configs = {
-    root = {
-      SUBVOLUME = "/";
-      TIMELINE_CREATE = true;
-      TIMELINE_CLEANUP = true;
-    };
+  # home 保留更多天/周/月，因为用户数据比系统配置更值得长期恢复。
+  services.snapper = {
+    snapshotInterval = "hourly";
+    cleanupInterval = "1d";
+    # 关机错过计划时间后开机补跑，维持主力机每小时快照节奏。
+    persistentTimer = true;
 
-    home = {
-      SUBVOLUME = "/home";
-      TIMELINE_CREATE = true;
-      TIMELINE_CLEANUP = true;
+    configs = {
+      root = {
+        SUBVOLUME = "/";
+        TIMELINE_CREATE = true;
+        TIMELINE_CLEANUP = true;
+
+        TIMELINE_LIMIT_HOURLY = 12;
+        TIMELINE_LIMIT_DAILY = 7;
+        TIMELINE_LIMIT_WEEKLY = 4;
+        TIMELINE_LIMIT_MONTHLY = 3;
+        TIMELINE_LIMIT_YEARLY = 0;
+      };
+
+      home = {
+        SUBVOLUME = "/home";
+        TIMELINE_CREATE = true;
+        TIMELINE_CLEANUP = true;
+
+        TIMELINE_LIMIT_HOURLY = 12;
+        TIMELINE_LIMIT_DAILY = 14;
+        TIMELINE_LIMIT_WEEKLY = 8;
+        TIMELINE_LIMIT_MONTHLY = 6;
+        TIMELINE_LIMIT_YEARLY = 0;
+      };
     };
   };
 
