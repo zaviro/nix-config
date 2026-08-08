@@ -329,9 +329,20 @@
     inputMethod = {
       enable = true;
       type = "fcitx5";
-      fcitx5.addons = [ pkgs.fcitx5-rime ];
+      fcitx5 = {
+        addons = [ pkgs.fcitx5-rime ];
+        # Niri/GNOME 均为原生 Wayland 会话：GTK 走 text-input-v3，不再设置
+        # GTK_IM_MODULE（X11 时代的 D-Bus im module 变量），fcitx5-diagnose
+        # 已确认 Wayland 前端（input-method-v2）正在生效。
+        waylandFrontend = true;
+      };
     };
   };
+
+  # waylandFrontend 会同时移除 GTK_IM_MODULE 与 QT_IM_MODULE，但非 KWin 桌面
+  # 的 Qt 无法用 text-input-v2/v3（v2 仅 KWin，Qt < 6.7 不支持 v3），必须保留
+  # fcitx im module 回退，否则 Qt 应用会丢失输入法。
+  environment.variables.QT_IM_MODULE = "fcitx";
 
   services.openssh = {
     enable = true;
