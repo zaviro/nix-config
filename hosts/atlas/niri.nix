@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 
 let
   # 基于当前 nixpkgs 中 Niri 自带的默认配置，只替换桌面壳相关入口；
@@ -40,6 +40,14 @@ in
     playerctl
     xwayland-satellite
   ];
+
+  # GDM greeter 的会话环境由 pam_getenvlist 重建，不继承守护进程的 XDG_DATA_DIRS，
+  # 导致其枚举不到 sessionData.desktops 里的会话文件（gnome.desktop 等），
+  # 登录界面不显示「选择会话」齿轮。所有桌面模块（GNOME/niri/Hyprland/Cosmic）
+  # 都会汇入同一个 desktops 包，此处通过 GDM env.d 注入一次即覆盖全部会话。
+  environment.etc."gdm/env.d/00-session-dirs.env".text = ''
+    XDG_DATA_DIRS=${config.services.displayManager.sessionData.desktops}/share:$XDG_DATA_DIRS
+  '';
 
   # atlas 的 Niri 配置属于主机专属用户配置，不进入跨主机 home/zaviro。
   home-manager.users.zaviro.xdg.configFile."niri/config.kdl".source = niriConfig;
