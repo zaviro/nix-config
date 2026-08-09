@@ -11,6 +11,8 @@ let
           --replace-fail 'Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }' 'Mod+T hotkey-overlay-title="Open a Terminal: Ghostty" { spawn "ghostty"; }' \
           --replace-fail 'Mod+D hotkey-overlay-title="Run an Application: fuzzel" { spawn "fuzzel"; }' 'Mod+D hotkey-overlay-title="Open DMS Launcher" { spawn "dms" "ipc" "spotlight" "toggle"; }' \
           --replace-fail 'Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }' 'Super+Alt+L hotkey-overlay-title="Lock the Screen" { spawn "dms" "ipc" "lock" "lock"; }'
+
+        substituteInPlace "$out" --replace-fail '    gaps 16' '    gaps 0'
           sed -i '/^    focus-ring {$/,/^    }$/ s/^        \/\/ off$/        off/' "$out"
 
         substituteInPlace "$out" --replace-fail 'binds {' 'binds {
