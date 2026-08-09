@@ -1,9 +1,12 @@
 {
   lib,
-  diskDevice,
-  swapSize,
   ...
 }:
+
+let
+  diskDevice = "/dev/disk/by-id/nvme-eui.0000000000000000a428b700fe430003";
+  swapSize = "64G";
+in
 
 {
   assertions = [

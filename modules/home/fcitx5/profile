@@ -1,0 +1,11 @@
+[Groups/0]
+Name=默认
+Default Layout=us
+DefaultIM=rime
+
+[Groups/0/Items/0]
+Name=rime
+Layout=
+
+[GroupOrder]
+0=默认

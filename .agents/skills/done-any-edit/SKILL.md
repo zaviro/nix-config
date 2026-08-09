@@ -35,7 +35,7 @@ nix flake check
 | --- | --- |
 | `hosts/atlas/**` | atlas 求值和完整构建 |
 | `hosts/legion-wsl/**` | legion-wsl 求值和完整构建 |
-| `home/**`、`modules/home-manager/**` | 两个 NixOS 输出求值，当前 atlas 完整构建 |
+| `hosts/*/home.nix`、`modules/home/**` | 两个 NixOS 输出求值，当前 atlas 完整构建 |
 | `modules/nixos/**` 或共享输入接线 | 两个 NixOS 输出求值，并分别完整构建 |
 
 使用：

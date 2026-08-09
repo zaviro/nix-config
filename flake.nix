@@ -81,7 +81,6 @@
             codexPackage
             home-manager
             nixos-wsl
-            nixvim
             ;
         };
         modules = [ ./hosts/legion-wsl ];
@@ -97,9 +96,6 @@
             home-manager
             nixvim
             ;
-
-          diskDevice = "/dev/disk/by-id/nvme-eui.0000000000000000a428b700fe430003";
-          swapSize = "64G";
         };
         modules = [ ./hosts/atlas ];
       };
