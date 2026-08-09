@@ -11,6 +11,24 @@ description: Complete and safely hand off edits in this NixOS configuration repo
 git add <new-files>
 ```
 
+## 文档同步
+
+开始实现时和交付前各做一次文档影响检查。仅在改动改变了读者需要依赖的事实、
+操作方式或仓库约定时，更新对应文档；不要为纯重构、内部实现或无语义的格式变更
+机械修改文档，也不要新建重复的说明文件。
+
+现有文档按受众分工：
+
+| 文档 | 何时更新 |
+| --- | --- |
+| `README.md` | 对人可见的主机范围、公开 Flake 接口、主要能力、使用或运维入口发生变化时 |
+| `AGENTS.md` | 仓库结构语义、放置规则、跨主机边界或所有协作者都必须遵守的约定发生变化时 |
+| `.agents/skills/done-any-edit/SKILL.md` | 编辑完成后的验证、激活、回滚、提交或推送工作流发生变化时 |
+
+一项改动可以同时影响多份文档。文档应描述当前事实，并链接到唯一的权威流程，
+避免在 `README.md` 或 `AGENTS.md` 复制 skill 中易变的命令细节。交付时说明已更新
+哪些文档；若不需要更新，也简要说明文档检查结论。
+
 ## 验证
 
 纯文档、注释或格式修改只运行空白检查：
@@ -125,7 +143,7 @@ git diff --cached
 git commit -m "<type>(<scope>): <description>"
 ```
 
-提交成功后自动推送到 `next`，不允许 force push。先确认当前分支为 `next`，获取远端状态，并审查待推送提交：
+提交成功后自动推送到 `next`。`next` 是可整理的集成分支：当重写历史能明显提高提交边界或可读性时，可以 rebase 或 squash 后强制推送。先确认当前分支为 `next`，获取远端状态，并审查待推送提交：
 
 ```bash
 test "$(git branch --show-current)" = next
@@ -133,8 +151,14 @@ git fetch origin
 git log --oneline origin/next..HEAD
 ```
 
-若本地 `next` 落后或与 `origin/next` 分叉，运行 `git rebase origin/next`，并再次审查待推送提交。若 fetch 或 rebase 失败、发生 rebase 冲突、审查发现本次任务以外的既有提交，或 push 被拒绝，立即停止并请示用户。确认待推送内容仅包含本次任务后运行：
+若本地 `next` 落后或与 `origin/next` 分叉，运行 `git rebase origin/next`，并再次审查待推送提交。若 fetch 或 rebase 失败、发生 rebase 冲突、审查发现本次任务以外的既有提交，或 push 被拒绝，立即停止并请示用户。确认待推送内容仅包含本次任务后，普通提交使用：
 
 ```bash
 git push origin next
+```
+
+若已明确决定重写 `next` 历史，推送前须再次审查重写后的提交范围，并使用：
+
+```bash
+git push --force-with-lease origin next
 ```
