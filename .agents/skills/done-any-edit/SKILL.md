@@ -125,16 +125,16 @@ git diff --cached
 git commit -m "<type>(<scope>): <description>"
 ```
 
-提交成功后自动推送到 `main`，不允许 force push。先确认当前分支为 `main`，获取远端状态，并审查待推送提交：
+提交成功后自动推送到 `next`，不允许 force push。先确认当前分支为 `next`，获取远端状态，并审查待推送提交：
 
 ```bash
-test "$(git branch --show-current)" = main
+test "$(git branch --show-current)" = next
 git fetch origin
-git log --oneline origin/main..HEAD
+git log --oneline origin/next..HEAD
 ```
 
-若本地 `main` 落后或与 `origin/main` 分叉，运行 `git rebase origin/main`，并再次审查待推送提交。若 fetch 或 rebase 失败、发生 rebase 冲突、审查发现本次任务以外的既有提交，或 push 被拒绝，立即停止并请示用户。确认待推送内容仅包含本次任务后运行：
+若本地 `next` 落后或与 `origin/next` 分叉，运行 `git rebase origin/next`，并再次审查待推送提交。若 fetch 或 rebase 失败、发生 rebase 冲突、审查发现本次任务以外的既有提交，或 push 被拒绝，立即停止并请示用户。确认待推送内容仅包含本次任务后运行：
 
 ```bash
-git push origin main
+git push origin next
 ```

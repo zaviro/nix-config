@@ -158,10 +158,13 @@ sudo nixos-rebuild switch --flake ~/nix-config
 
 description 使用英文，并确保每个提交只描述其实际 diff。
 
+仓库使用 `next` 作为日常开发分支，以便 NixOS 配置在长期实际使用中得到验证，
+并让 `main` 保持更干净的历史。
+
 任何改动成功完成并通过必要检查后，都必须创建本地提交。提交前应核对工作区，
 仅暂存本次任务涉及的文件，不得把用户已有或无关的改动带入提交。
 
-提交后自动推送到 `main`，且绝不 force push。先运行 `git fetch origin` 并检查本地
-`main` 与 `origin/main`；如本地落后或分叉，运行 `git rebase origin/main`，再运行
-`git push origin main`。fetch 或 rebase 失败、出现 rebase 冲突、发现待推送内容包含
+提交后自动推送到 `next`，且绝不 force push。先运行 `git fetch origin` 并检查本地
+`next` 与 `origin/next`；如本地落后或分叉，运行 `git rebase origin/next`，再运行
+`git push origin next`。fetch 或 rebase 失败、出现 rebase 冲突、发现待推送内容包含
 本次任务以外的既有提交，或 push 被拒绝时，立即停止并请示用户。

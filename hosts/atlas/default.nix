@@ -86,6 +86,7 @@
           historySubstringSearch.enable = true;
           oh-my-zsh = {
             enable = true;
+            theme = "robbyrussell";
             # zoxide 使用其 Home Manager 集成，避免与 Oh My Zsh 插件重复初始化。
             plugins = [
               "git"
