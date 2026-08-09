@@ -58,26 +58,30 @@ nix path-info "$system_toplevel"
 
 ## 激活
 
-默认不得执行 `nh os test` 或 `nh os switch`。只有用户明确授权临时激活或持久激活时才可执行。不要使用 `sudo nh os`，也不要运行 `nh home switch`。
+对于当前机器的低风险 NixOS 或 Home Manager 配置改动，在完成所需格式化、检查和构建后，自动执行 `nh os test ~/nix-config`，成功后立即执行 `nh os switch ~/nix-config`。不要使用 `sudo nh os`，也不要运行 `nh home switch`。纯文档、注释或格式修改不激活。
 
-在授权的临时激活前，先确认新的 `toplevel` 已实现。若修改 `nixpkgs`、内核、systemd、NetworkManager、显示管理器、桌面会话或 Home Manager input，先运行：
+以下变更可能让机器无法正常使用或失去恢复通道，必须先报告风险并取得用户确认，不得自动激活：Disko、引导加载器、内核或 initrd、网络（包括 NetworkManager、Tailscale、SSH）、防火墙、认证或提权、显示管理器、桌面会话或图形栈。共享模块仍须遵守仓库的跨主机范围约束。
+
+激活前先确认新的 `toplevel` 已实现，并记录当前系统 generation：
 
 ```bash
-nix store diff-closures /run/current-system "$system_toplevel"
+current_generation="$(readlink /nix/var/nix/profiles/system | sed -n 's/^system-\\([0-9]\\+\\)-link$/\\1/p')"
+test -n "$current_generation"
 ```
 
-报告风险并再次取得确认后才可临时激活。WSL 仅在目标机器上按下列顺序执行：
+`nh os test` 会真实激活配置，但不设为下次启动默认；`nh os switch` 会重新运行激活并持久化该配置。`switch` 成功退出即可视为成功，无需额外健康检查。若构建或激活前校验失败，系统未切换，绝不执行回滚。只有输出表明已开始激活而 `test` 或 `switch` 失败时，才执行：
+
+```bash
+nh os rollback --to "$current_generation"
+```
+
+回滚也失败时立即停止并向用户报告；不要尝试 Disko 或其他破坏性恢复操作。
+
+WSL 仅在目标机器上按下列顺序执行：
 
 ```bash
 nh os test ~/nix-config
 nh os switch ~/nix-config
-```
-
-atlas 的授权激活后检查：
-
-```bash
-systemctl --failed
-systemctl is-active home-manager-zaviro.service
 ```
 
 `nh` 不可用时，才使用恢复命令：
@@ -112,7 +116,7 @@ nix flake update
 
 ## 提交与推送
 
-完成验证后，核对工作区与 diff，只暂存本次任务涉及的文件，并使用 Conventional Commit：
+完成验证及所需的 `test`/`switch` 后，核对工作区与 diff，只暂存本次任务涉及的文件，并使用 Conventional Commit：
 
 ```bash
 git status --short
@@ -121,11 +125,16 @@ git diff --cached
 git commit -m "<type>(<scope>): <description>"
 ```
 
-只有用户明确要求推送、发布或创建 PR 时才推送。先检查：
+提交成功后自动推送到 `main`，不允许 force push。先确认当前分支为 `main`，获取远端状态，并审查待推送提交：
 
 ```bash
-git status -sb
-git log --oneline @{upstream}..HEAD
+test "$(git branch --show-current)" = main
+git fetch origin
+git log --oneline origin/main..HEAD
 ```
 
-已有 upstream 时运行 `git push`；新分支使用 `git push -u origin "$(git branch --show-current)"`。不要使用 force push。
+若本地 `main` 落后或与 `origin/main` 分叉，运行 `git rebase origin/main`，并再次审查待推送提交。若 fetch 或 rebase 失败、发生 rebase 冲突、审查发现本次任务以外的既有提交，或 push 被拒绝，立即停止并请示用户。确认待推送内容仅包含本次任务后运行：
+
+```bash
+git push origin main
+```

@@ -79,23 +79,28 @@ nix flake check
 
 # atlas
 nix build .#nixosConfigurations.atlas.config.system.build.toplevel --no-link
-# 仅在用户明确授权临时激活或持久激活时运行
+# 低风险配置改动完成构建后自动依次运行
 nh os test ~/nix-config
 nh os switch ~/nix-config
 
 # legion-wsl
 nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
-# 仅在用户明确授权临时激活或持久激活时运行
+# 低风险配置改动完成构建后自动依次运行
 nh os test ~/nix-config
 nh os switch ~/nix-config
 ```
 
 两台机器都以普通用户运行 `nh os`。它会在系统激活阶段自动调用可用的提权工具，
 不得使用 `sudo nh os`。Home Manager 已嵌入系统，也不得单独运行
-`nh home switch`。默认验证仅包含格式化、求值和构建。`nh os test` 会立即临时
-激活新配置，可能中断网络、图形会话、服务或正在运行的任务；只有用户明确要求
-运行时测试或授权临时激活时才能执行。测试后仅在任务明确要求持久生效时才执行
-`nh os switch`。纯文档、注释或格式修改无需激活。
+`nh home switch`。对于当前机器的低风险配置改动，完成格式化、检查和必要构建后，
+自动依次运行 `nh os test` 与 `nh os switch`；前者真实激活但不设为下次启动默认，
+后者持久激活。纯文档、注释或格式修改无需激活。Disko、引导加载器、内核或
+initrd、网络或远程访问、防火墙、认证或提权、显示管理器或图形会话等可能使机器
+无法正常使用或失去恢复通道的变更，必须先报告风险并取得用户确认。
+
+运行 `test` 前须记录当前系统 generation。若构建或激活前校验失败，不得回滚；
+若已进入激活且 `test` 或 `switch` 失败，则使用 `nh os rollback --to <记录的 generation>`
+恢复。`switch` 成功退出即视为持久激活成功，不重复执行额外健康检查。
 
 `nh os` 默认按本机 hostname 选择对应的 `nixosConfigurations` 输出。
 `home-manager-zaviro.service` 是系统级服务，检查激活结果时不要使用
@@ -155,3 +160,8 @@ description 使用英文，并确保每个提交只描述其实际 diff。
 
 任何改动成功完成并通过必要检查后，都必须创建本地提交。提交前应核对工作区，
 仅暂存本次任务涉及的文件，不得把用户已有或无关的改动带入提交。
+
+提交后自动推送到 `main`，且绝不 force push。先运行 `git fetch origin` 并检查本地
+`main` 与 `origin/main`；如本地落后或分叉，运行 `git rebase origin/main`，再运行
+`git push origin main`。fetch 或 rebase 失败、出现 rebase 冲突、发现待推送内容包含
+本次任务以外的既有提交，或 push 被拒绝时，立即停止并请示用户。
