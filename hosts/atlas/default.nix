@@ -64,6 +64,11 @@
       ];
 
       programs = {
+        nh = {
+          enable = true;
+          osFlake = "/home/zaviro/nix-config";
+        };
+
         # 交互式 shell 由 Home Manager 生成，避免维护可变的 ~/.oh-my-zsh 克隆。
         zsh = {
           enable = true;

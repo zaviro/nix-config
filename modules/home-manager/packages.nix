@@ -4,7 +4,6 @@
   # 所有主机都需要的用户级工具；系统启动所需软件应留在 NixOS 配置中。
   home.packages = with pkgs; [
     # Nix 与开发基础工具。
-    nh
     nixfmt
     devenv
 
