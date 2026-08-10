@@ -6,7 +6,6 @@
     # Agent、脚本和 Nixvim 都直接受益的非交互工具。
     ripgrep
     ast-grep
-    curl
     file
     jq
     gh
@@ -17,8 +16,6 @@
     eza
     fd
     htop
-    zoxide
-    delta
     lazygit
     dust
     ouch
@@ -32,6 +29,18 @@
     # 保留系统自带的 cat、du、ps 和 top，避免改变脚本或熟悉命令的语义；
     # 新工具使用各自社区通行的命令名。
     bat.enable = true;
+
+    delta = {
+      enable = true;
+      enableGitIntegration = false;
+      enableJujutsuIntegration = false;
+    };
+
+    git.settings = [
+      {
+        core.pager = "${pkgs.delta}/bin/delta";
+      }
+    ];
 
     broot = {
       enable = true;

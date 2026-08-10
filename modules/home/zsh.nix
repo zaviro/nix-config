@@ -19,16 +19,12 @@
     };
     shellAliases = {
       ll = "ls -lha";
-      gs = "git status";
       ga = "git add";
       gc = "git commit";
       cx = "codex";
-      oc = "opencode";
-      cc = "claude";
-      gm = "gemini";
       ot = "openclaw tui";
       hm = "hermes";
-      ld = "lazydocker";
+      zj = "zellij";
       dps = "docker ps";
       dcu = "docker compose up -d";
       dcd = "docker compose down";

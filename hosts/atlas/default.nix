@@ -60,9 +60,7 @@
   };
   time.timeZone = "Asia/Shanghai";
   environment.systemPackages = with pkgs; [
-    git
     vim
-    curl
     wget
     rsync
     pciutils
