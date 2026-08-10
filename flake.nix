@@ -31,11 +31,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # 平台模块与 Codex 包独立锁定，变更时需要与主机一起验证。
+    # WSL 平台模块跟随主分支，nixpkgs 与主软件集保持一致。
     nixos-wsl = {
-      url = "github:nix-community/NixOS-WSL/eaeb18da90024448a60eb1ec7132eafa4003404e";
+      url = "github:nix-community/NixOS-WSL/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Codex 包使用独立锁定的软件集。
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
       # llm-agents 使用独立锁定的 nixpkgs unstable，不强制跟随任一主机。
