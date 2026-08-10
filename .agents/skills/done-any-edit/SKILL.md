@@ -87,7 +87,15 @@ current_generation="$(readlink /nix/var/nix/profiles/system | sed -n 's/^system-
 test -n "$current_generation"
 ```
 
-`nh os test` 会真实激活配置，但不设为下次启动默认；`nh os switch` 会重新运行激活并持久化该配置。`switch` 成功退出即可视为成功，无需额外健康检查。若构建或激活前校验失败，系统未切换，绝不执行回滚。只有输出表明已开始激活而 `test` 或 `switch` 失败时，才执行：
+`nh os test` 会真实激活配置，但不设为下次启动默认；`nh os switch` 会重新运行激活并持久化该配置。`switch` 成功退出即可视为成功，无需额外健康检查。若构建或激活前校验失败，系统未切换，绝不执行回滚。
+
+`nh os test` 的临时闭包不会成为 system profile generation。若需结束成功的测试或测试激活已开始但失败，使用已记录的持久 generation 重新激活；不要使用 `nh os rollback`：
+
+```bash
+/nix/var/nix/profiles/system-"$current_generation"-link/bin/switch-to-configuration switch
+```
+
+对 `nh os switch` 而言，只有输出表明已开始激活而操作失败时，才执行：
 
 ```bash
 nh os rollback --to "$current_generation"

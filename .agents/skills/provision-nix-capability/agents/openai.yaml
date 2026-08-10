@@ -1,0 +1,4 @@
+interface:
+  display_name: "Provision Nix Capability"
+  short_description: "Route NixOS tools to their declarative owner"
+  default_prompt: "Use $provision-nix-capability to make a requested tool available with the smallest appropriate Nix scope."
