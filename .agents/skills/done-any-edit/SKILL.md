@@ -1,15 +1,31 @@
 ---
 name: done-any-edit
-description: Complete and safely hand off edits in this NixOS configuration repository. Use whenever modifying repository files, especially NixOS, Home Manager, flake inputs, host configuration, or documentation, to select validation, activation, commit, push, and cross-host safeguards.
+description: Complete and safely hand off edits in this NixOS configuration repository. Use whenever modifying repository files, especially NixOS, Home Manager, flake inputs, host configuration, or documentation, to select validation, activation, change, publication, and cross-host safeguards.
 ---
 
 # Done Any Edit
 
-完成任何改动前后都遵循本工作流。新增文件先暂存，Git Flake 才能在求值时包含它们：
+完成任何改动前后都遵循本工作流。本仓库使用 colocated Jujutsu/Git workspace，
+`main` 是唯一长期 bookmark；任务中的工作保持为匿名 change，直到完整验证和所需
+激活都成功。修改工作区、历史、bookmark 或远端状态的版本控制操作只使用 `jj`。
+Git 仅作为存储后端和第三方工具兼容层；不得执行会写入工作区、index、refs 或远端
+状态的 Git 命令。唯一保留的直接 Git 检查是只读的 `git diff --check`。
+
+开始编辑前先让 jj snapshot 当前工作区，并记录 change、diff 和 operation 基线：
 
 ```bash
-git add <new-files>
+jj status
+jj diff --summary
+jj log -r '@ | @- | main | main@origin'
+jj log -r 'main..@' --reversed
+jj op log -n 1
 ```
+
+新文件无需暂存；jj 会自动 snapshot 未忽略的新文件，使 Flake 求值可以包含它们。
+若 `jj status` 未显示预期的新文件，先检查 ignore 或文件大小限制，不得改用 Git
+暂存。开始时已有的 change 和 diff 属于用户：记录其 change ID 与文件范围，不得
+自动 describe、split、squash、rebase、abandon、restore 或纳入本次发布。既有改动
+与任务重叠，或无法证明发布范围仅包含本次任务时，停止并请示用户。
 
 ## 文档同步
 
@@ -34,16 +50,16 @@ git add <new-files>
 纯文档、注释或格式修改只运行空白检查：
 
 ```bash
+jj diff --git
 git diff --check
-git diff --cached --check
 ```
 
 修改 Nix 配置时，按以下顺序运行：
 
 ```bash
 nix fmt
+jj diff --git
 git diff --check
-git diff --cached --check
 nix flake check
 ```
 
@@ -136,33 +152,83 @@ nix flake update
 
 更新依赖应独立提交，并完成所有受影响主机的必要验证。不要自动调整 `home.stateVersion` 或 `system.stateVersion`。
 
-## 提交与推送
+## Change 与发布
 
-完成验证及所需的 `test`/`switch` 后，核对工作区与 diff，只暂存本次任务涉及的文件，并使用 Conventional Commit：
-
-```bash
-git status --short
-git diff
-git diff --cached
-git commit -m "<type>(<scope>): <description>"
-```
-
-提交成功后自动推送到 `next`。`next` 是可整理的集成分支：当重写历史能明显提高提交边界或可读性时，可以 rebase 或 squash 后强制推送。先确认当前分支为 `next`，获取远端状态，并审查待推送提交：
+一个完整任务可以包含多个本地匿名 change，并可在发布前用 jj 整理边界；不得为
+日常 WIP 创建长期 bookmark，也不得在每个 change 后立即发布。所有将发布的非空
+change 都使用 Conventional Commit 描述。完成验证及所需的 `test`/`switch` 后，
+先核对当前 change 和最终 diff：
 
 ```bash
-test "$(git branch --show-current)" = next
-git fetch origin
-git log --oneline origin/next..HEAD
+jj status
+jj diff --summary
+jj diff --git
+git diff --check
 ```
 
-若本地 `next` 落后或与 `origin/next` 分叉，运行 `git rebase origin/next`，并再次审查待推送提交。若 fetch 或 rebase 失败、发生 rebase 冲突、审查发现本次任务以外的既有提交，或 push 被拒绝，立即停止并请示用户。确认待推送内容仅包含本次任务后，普通提交使用：
+默认把当前任务涉及的明确 fileset 形成 change；未选择的既有改动会留在新的
+working-copy change 中：
 
 ```bash
-git push origin next
+jj commit -m "<type>(<scope>): <description>" path/to/file1 path/to/file2
+jj show @-
 ```
 
-若已明确决定重写 `next` 历史，推送前须再次审查重写后的提交范围，并使用：
+若整个 working-copy diff 都属于本次任务，可以省略 fileset。若一项任务需要多个
+change，可重复形成和整理，但整个任务最终只发布一次。用户明确要求暂不提交、暂不
+推送或保留本地时，不运行 `jj commit`，不移动 `main`，也不推送；保留匿名
+working-copy change，并在交付时报告其 change ID、父提交与 diff 范围。
+
+发布前获取远端状态并检查 `main`。若 fetch 失败、bookmark 出现冲突，或远端状态
+无法确认，立即停止，不得猜测或覆盖：
 
 ```bash
-git push --force-with-lease origin next
+jj git fetch --remote origin
+jj bookmark list main --all-remotes
+jj log -r 'main | main@origin'
 ```
+
+若远端 `main` 已前进，将本次任务的匿名 stack rebase 到更新后的本地 `main`。当
+候选 stack 顶端是 `@-` 时使用：
+
+```bash
+jj rebase -b @- -o main
+jj status
+jj log -r 'conflicts() & (main..@-)'
+```
+
+jj 可以把冲突记录在 change 中，因此命令成功退出不等于没有冲突。出现冲突立即
+停止并请示用户。rebase 后重新核对候选 diff；若候选 tree 发生变化，重新运行所有
+受影响的验证、构建和激活。
+
+确认待发布范围只包含本次任务，并且所有 change 都有准确描述、没有冲突：
+
+```bash
+jj log -r 'main@origin..@-' --reversed
+jj diff --from main@origin --to @-
+jj log -r 'conflicts() & (main@origin..@-)'
+```
+
+发现本次任务以外的既有 change 时不得发布。审查通过后仅向前移动 `main`，先 dry
+run，再执行整个任务唯一一次远端发布：
+
+```bash
+jj bookmark move main --to @-
+jj git push --remote origin --bookmark main --dry-run
+jj git push --remote origin --bookmark main
+```
+
+不得使用允许 `main` 向后或横向移动的选项，也不得重写已发布的 `main`。push 被
+拒绝或 dry run 显示意外范围时立即停止；不要自动重试或改推其他 bookmark。push
+成功后用下列命令确认本地与远端 `main` 同步：
+
+```bash
+jj bookmark list main --all-remotes
+jj log -r '@ | @- | main | main@origin'
+```
+
+对于尚未发布的误操作，先运行 `jj op log` 确认目标 operation；只有能确定最后一次
+operation 就是待撤销操作时才运行 `jj undo`，更早的恢复须先用
+`jj --at-op=OPERATION_ID log` 审查并请示用户。不得用 Git 恢复命令。对于已经
+发布到 `main` 的错误，创建新的修复或 revert change，重新完成本工作流并向前发布；
+不得撤销远端操作或把 `main` 后移。

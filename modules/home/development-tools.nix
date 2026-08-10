@@ -16,6 +16,7 @@
   programs.jujutsu = {
     enable = true;
     settings = {
+      git.colocate = true;
       user = {
         name = "zaviro";
         email = "1264166738a@gmail.com";

@@ -32,6 +32,13 @@
 工具能力的临时使用、添加、替换和移除流程见
 [`provision-nix-capability` skill](.agents/skills/provision-nix-capability/SKILL.md)。
 
+## 版本控制
+
+本仓库使用 colocated Jujutsu/Git workspace：Jujutsu 管理工作区、历史与远端写操作，
+Git 仅作为存储后端和只读兼容层。远端只保留长期 `main` bookmark；本地工作位于
+`main` 之上的匿名 changes，完成验证和激活后才把 `main` 前移并发布。不得使用 Git
+命令修改工作区、历史、refs 或远端状态。
+
 除非用户明确要求跨机器，否则只编辑、求值、构建和激活当前主机；共享模块变更
 需要明确接受其跨主机影响。不得提交明文凭证，`home.stateVersion` 与
 `system.stateVersion` 保持 `26.05`。目录重构不得更新 `flake.lock`；只有 input

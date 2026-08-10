@@ -19,8 +19,11 @@
     };
     shellAliases = {
       ll = "ls -lha";
-      ga = "git add";
-      gc = "git commit";
+      js = "jj status";
+      jd = "jj diff";
+      jl = "jj log";
+      jn = "jj new";
+      jc = "jj commit";
       cx = "codex";
       ot = "openclaw tui";
       hm = "hermes";

@@ -33,10 +33,9 @@
     };
 
     programs.zsh = {
-      oh-my-zsh.plugins = lib.mkAfter [ "jj" ];
+      oh-my-zsh.plugins = lib.mkForce [ "jj" ];
       initContent = ''
-        # Prefer JJ's current change in colocated repositories. Plain Git
-        # repositories retain the theme's original branch indicator.
+        # robbyrussell calls git_prompt_info; use that hook to render JJ state.
         function jj_prompt_info() {
           local change bookmarks
 
@@ -49,9 +48,8 @@
           print -nr -- "%{$fg_bold[magenta]%}jj:(%{$fg[red]%}$change%{$fg_bold[blue]%}''${bookmarks:+ $bookmarks}%{$reset_color%}) "
         }
 
-        functions[_git_prompt_info]="''${functions[git_prompt_info]}"
         function git_prompt_info() {
-          jj_prompt_info || _git_prompt_info
+          jj_prompt_info
         }
       '';
     };
