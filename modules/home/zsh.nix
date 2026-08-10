@@ -12,14 +12,10 @@
       ignoreSpace = true;
       share = true;
     };
-    historySubstringSearch.enable = true;
     oh-my-zsh = {
       enable = true;
       theme = "robbyrussell";
-      plugins = [
-        "git"
-        "fzf"
-      ];
+      plugins = [ "git" ];
     };
     shellAliases = {
       ll = "ls -lha";
