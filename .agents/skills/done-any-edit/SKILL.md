@@ -47,22 +47,20 @@ git diff --cached --check
 nix flake check
 ```
 
-按实际 diff 选择额外验证：
+完成 `nix flake check` 后，再按实际 diff 选择额外验证：
 
 | 修改范围 | 必需验证 |
 | --- | --- |
 | `hosts/atlas/**` | atlas 求值和完整构建 |
 | `hosts/legion-wsl/**` | legion-wsl 求值和完整构建 |
-| `hosts/*/home.nix`、`modules/home/**` | 两个 NixOS 输出求值，当前 atlas 完整构建 |
-| `modules/nixos/**` 或共享输入接线 | 两个 NixOS 输出求值，并分别完整构建 |
+| `hosts/*/home.nix` 或仅由单一主机导入的模块 | 受影响主机求值和完整构建 |
+| 共享模块或共享输入接线 | 当前受影响主机求值和完整构建；所有其他实际导入它的主机求值 |
 
-使用：
+不在本机无差别构建其他主机；这类构建交由 CI、目标机器或具备缓存/远程 builder 的构建机完成。对每个需验证的主机使用：
 
 ```bash
-nix eval .#nixosConfigurations.legion-wsl.config.system.build.toplevel.drvPath
-nix eval .#nixosConfigurations.atlas.config.system.build.toplevel.drvPath
-nix build .#nixosConfigurations.legion-wsl.config.system.build.toplevel --no-link
-nix build .#nixosConfigurations.atlas.config.system.build.toplevel --no-link
+nix eval .#nixosConfigurations.<host>.config.system.build.toplevel.drvPath
+nix build .#nixosConfigurations.<host>.config.system.build.toplevel --no-link
 ```
 
 完整构建后确认目标确实在 store 中：
@@ -71,8 +69,6 @@ nix build .#nixosConfigurations.atlas.config.system.build.toplevel --no-link
 system_toplevel="$(nix build .#nixosConfigurations.atlas.config.system.build.toplevel --no-link --print-out-paths)"
 nix path-info "$system_toplevel"
 ```
-
-如果当前机器无法承担另一台主机的构建，交由 CI、目标机器或具备缓存/远程 builder 的构建机完成。
 
 ## 激活
 
