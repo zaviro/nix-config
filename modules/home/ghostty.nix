@@ -7,7 +7,8 @@
       copy-on-select = "clipboard";
       cursor-style = "bar";
       cursor-style-blink = false;
-      fullscreen = true;
+      maximize = true;
+      gtk-titlebar-hide-when-maximized = true;
     };
   };
 }
