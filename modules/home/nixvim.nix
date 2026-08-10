@@ -23,31 +23,51 @@
     };
 
     plugins = {
-      treesitter.enable = true;
+      # 语法高亮、缩进与原生代码折叠共享同一套 Tree-sitter 解析结果。
+      treesitter = {
+        enable = true;
+        highlight.enable = true;
+        indent.enable = true;
+        folding.enable = true;
+      };
+
+      # LSP 补全 UI；默认配置会自动使用已启用语言服务器的能力。
+      blink-cmp.enable = true;
+
+      # 紧凑的项目文件树；连续的单子目录会折叠为一条路径。
+      nvim-tree = {
+        enable = true;
+        openOnSetup = true;
+        settings.renderer.group_empty = true;
+      };
+
       telescope.enable = true;
       which-key.enable = true;
       gitsigns.enable = true;
       web-devicons.enable = true;
-      nvim-ufo.enable = true;
+      # 使用 Neovim 内建 LSP API；取代即将移除的 plugins.lsp 接口。
+      lspconfig.enable = true;
+    };
 
-      lsp = {
+    lsp.servers = {
+      # nvim-lspconfig 尚未自动传播 Blink 的 completion capabilities。
+      "*".config.capabilities.__raw = ''
+        require("blink-cmp").get_lsp_capabilities(vim.lsp.protocol.make_client_capabilities())
+      '';
+
+      ts_ls = {
         enable = true;
-        servers = {
-          ts_ls = {
-            enable = true;
-            # 限定前端文件类型，避免与其他语言服务器重复接管缓冲区。
-            filetypes = lib.mkForce [
-              "javascript"
-              "javascriptreact"
-              "typescript"
-              "typescriptreact"
-            ];
-          };
-          nixd.enable = true;
-          bashls.enable = true;
-          lua_ls.enable = true;
-        };
+        # 限定前端文件类型，避免与其他语言服务器重复接管缓冲区。
+        config.filetypes = lib.mkForce [
+          "javascript"
+          "javascriptreact"
+          "typescript"
+          "typescriptreact"
+        ];
       };
+      nixd.enable = true;
+      bashls.enable = true;
+      lua_ls.enable = true;
     };
 
     opts = {
@@ -59,9 +79,8 @@
       mouse = "a";
       termguicolors = true;
 
-      # Treesitter 提供折叠范围，启动时默认展开全部层级。
-      foldmethod = "expr";
-      foldexpr = "v:lua.vim.treesitter.foldexpr()";
+      # Tree-sitter 接管原生折叠；启动时默认展开，并显示可点击折叠栏。
+      foldcolumn = "1";
       foldlevel = 99;
       foldlevelstart = 99;
       foldenable = true;
@@ -81,15 +100,12 @@
         action = "<cmd>Telescope live_grep<cr>";
         options.desc = "Live grep";
       }
+      {
+        mode = "n";
+        key = "<leader>e";
+        action = "<cmd>NvimTreeToggle<cr>";
+        options.desc = "File explorer";
+      }
     ];
-
-    # nvim-ufo 的 Lua API 无法用声明式 keymaps 完整表达。
-    extraConfigLua = ''
-      vim.keymap.set("n", "zR", require('ufo').openAllFolds, { desc = "展开所有折叠" })
-      vim.keymap.set("n", "zM", require('ufo').closeAllFolds, { desc = "折叠所有内容" })
-      vim.keymap.set("n", "zr", require('ufo').openFoldsExceptKinds, { desc = "展开一层折叠" })
-      vim.keymap.set("n", "zm", require('ufo').closeFoldsWith, { desc = "折叠一层" })
-      vim.keymap.set("n", "za", "za", { desc = "切换当前折叠（原生Vim键）" })
-    '';
   };
 }
