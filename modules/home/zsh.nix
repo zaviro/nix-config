@@ -1,4 +1,7 @@
+{ pkgs, ... }:
 {
+  home.packages = [ pkgs.jj-starship ];
+
   programs.zsh = {
     enable = true;
     enableCompletion = true;
@@ -14,7 +17,7 @@
     };
     oh-my-zsh = {
       enable = true;
-      theme = "robbyrussell";
+      theme = "";
       plugins = [ "git" ];
     };
     shellAliases = {
@@ -39,5 +42,28 @@
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
+  };
+
+  programs.starship = {
+    enable = true;
+    enableZshIntegration = true;
+
+    extraPackages = [ pkgs.jj-starship ];
+
+    settings = {
+      git_branch.disabled = true;
+      git_commit.disabled = true;
+      git_status.disabled = true;
+
+      custom.jj = {
+        when = "jj-starship detect";
+        shell = [
+          "jj-starship"
+          "--no-jj-id"
+          "--no-jj-prefix"
+        ];
+        format = "$output ";
+      };
+    };
   };
 }
