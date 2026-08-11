@@ -36,8 +36,10 @@
 
 本仓库使用 colocated Jujutsu/Git workspace：Jujutsu 管理工作区、历史与远端写操作，
 Git 仅作为存储后端和只读兼容层。远端只保留长期 `main` bookmark；本地工作位于
-`main` 之上的匿名 changes，完成验证和激活后才把 `main` 前移并发布。不得使用 Git
-命令修改工作区、历史、refs 或远端状态。
+`main` 之上的匿名 changes。完成验证和激活不代表发布：只有用户明确要求发布或推送
+`main` 时，才可把它前移并发布。需要远端备份、跨机器继续或 agent 交接时，使用短期、
+按任务命名的 bookmark（如 `agent/<task>`）或 `push-*`；不得建立或共享长期 `next`
+开发线。不得使用 Git 命令修改工作区、历史、refs 或远端状态。
 
 除非用户明确要求跨机器，否则只编辑、求值、构建和激活当前主机；共享模块变更
 需要明确接受其跨主机影响。不得提交明文凭证，`home.stateVersion` 与

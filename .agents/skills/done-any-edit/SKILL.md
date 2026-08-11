@@ -7,7 +7,8 @@ description: Complete and safely hand off edits in this NixOS configuration repo
 
 完成任何改动前后都遵循本工作流。本仓库使用 colocated Jujutsu/Git workspace，
 `main` 是唯一长期 bookmark；任务中的工作保持为匿名 change，直到完整验证和所需
-激活都成功。修改工作区、历史、bookmark 或远端状态的版本控制操作只使用 `jj`。
+激活都成功。验证和激活不会自动授权发布：只有用户明确要求发布或推送 `main` 时才可
+移动和推送它。修改工作区、历史、bookmark 或远端状态的版本控制操作只使用 `jj`。
 Git 仅作为存储后端和第三方工具兼容层；不得执行会写入工作区、index、refs 或远端
 状态的 Git 命令。唯一保留的直接 Git 检查是只读的 `git diff --check`。
 
@@ -155,7 +156,9 @@ nix flake update
 ## Change 与发布
 
 一个完整任务可以包含多个本地匿名 change，并可在发布前用 jj 整理边界；不得为
-日常 WIP 创建长期 bookmark，也不得在每个 change 后立即发布。所有将发布的非空
+日常 WIP 创建长期 bookmark，也不得在每个 change 后立即发布。默认完成本地 change、
+验证和所需的 `test`/`switch` 后仍不发布；“完成”“交付”或普通编辑请求均不构成移动或
+推送 `main` 的授权，必须收到用户明确的“发布”或“推送 main”指示。所有将发布的非空
 change 都使用 Conventional Commit 描述。完成验证及所需的 `test`/`switch` 后，
 先核对当前 change 和最终 diff：
 
@@ -175,12 +178,15 @@ jj show @-
 ```
 
 若整个 working-copy diff 都属于本次任务，可以省略 fileset。若一项任务需要多个
-change，可重复形成和整理，但整个任务最终只发布一次。用户明确要求暂不提交、暂不
-推送或保留本地时，不运行 `jj commit`，不移动 `main`，也不推送；保留匿名
+change，可重复形成和整理。用户需要远端备份、跨机器继续或 agent 交接而尚未要求
+发布时，只能创建短期的、按任务命名的 bookmark（如 `agent/<task>`）或使用
+`jj git push --change @-` 创建 `push-*`；不得推送 `main` 或创建/共享 `next`。
+任务完成后删除这些临时 bookmark。用户明确要求暂不提交、暂不推送或保留本地时，
+不运行 `jj commit`，不移动 `main`，也不推送；保留匿名
 working-copy change，并在交付时报告其 change ID、父提交与 diff 范围。
 
-发布前获取远端状态并检查 `main`。若 fetch 失败、bookmark 出现冲突，或远端状态
-无法确认，立即停止，不得猜测或覆盖：
+只有收到用户明确的发布指示后，才获取远端状态并检查 `main`。若 fetch 失败、
+bookmark 出现冲突，或远端状态无法确认，立即停止，不得猜测或覆盖：
 
 ```bash
 jj git fetch --remote origin
