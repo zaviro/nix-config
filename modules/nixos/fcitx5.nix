@@ -5,7 +5,10 @@
     enable = true;
     type = "fcitx5";
     fcitx5 = {
-      addons = [ pkgs.fcitx5-rime ];
+      addons = with pkgs; [
+        fcitx5-rime
+        qt6Packages.fcitx5-chinese-addons
+      ];
       waylandFrontend = true;
     };
   };
