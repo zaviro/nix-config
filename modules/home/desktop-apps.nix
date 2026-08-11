@@ -8,6 +8,7 @@
     readest
     rustdesk
     spotify
+    tauon
   ];
 
   dconf.settings."org/gnome/desktop/default-applications/terminal" = {
