@@ -41,6 +41,9 @@ Git 仅作为存储后端和只读兼容层。远端只保留长期 `main` bookm
 按任务命名的 bookmark（如 `agent/<task>`）或 `push-*`；不得建立或共享长期 `next`
 开发线。不得使用 Git 命令修改工作区、历史、refs 或远端状态。
 
+当任务形成逻辑完整的变更并完成验证后，agent 应按
+[`.agents/skills/done-any-edit/SKILL.md`](.agents/skills/done-any-edit/SKILL.md) 的顺序完成当前主机所需的低风险激活：先 `nh os test`，成功后再 `nh os switch`；随后主动使用 `jj commit` 为本次明确 fileset 创建带 Conventional Commit 描述的 change。若用户明确要求暂不提交，则保留匿名 working-copy change 并报告其 ID。提交仍不等于发布，agent 不得因此移动或推送 `main`。
+
 除非用户明确要求跨机器，否则只编辑、求值、构建和激活当前主机；共享模块变更
 需要明确接受其跨主机影响。不得提交明文凭证，`home.stateVersion` 与
 `system.stateVersion` 保持 `26.05`。目录重构不得更新 `flake.lock`；只有 input
