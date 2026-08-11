@@ -10,6 +10,17 @@
       strategy = [ "history" ];
     };
     syntaxHighlighting.enable = true;
+    plugins = [
+      {
+        name = "fzf-tab";
+        src = pkgs.zsh-fzf-tab;
+        file = "share/fzf-tab/fzf-tab.plugin.zsh";
+      }
+    ];
+    initContent = ''
+      zstyle ':fzf-tab:*' fzf-flags '--height=50%' '--layout=reverse'
+      zstyle ':fzf-tab:*' switch-group '<' '>'
+    '';
     history = {
       ignoreAllDups = true;
       ignoreSpace = true;
