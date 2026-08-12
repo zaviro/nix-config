@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finish Nix Change"
+  short_description: "Validate and activate Nix repository changes"
+  default_prompt: "Use $finish-nix-change to validate and safely hand off this repository change."

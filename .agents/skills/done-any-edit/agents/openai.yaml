@@ -1,4 +1,0 @@
-interface:
-  display_name: "Done Any Edit"
-  short_description: "Verify and commit Nix configuration edits safely."
-  default_prompt: "Use $done-any-edit to safely validate and commit this repository change."
