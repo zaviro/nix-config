@@ -160,8 +160,8 @@ const MANAGED_RULES = INFRA_RULES.concat(
     "RULE-SET,telegram_ip," + GROUP.PROXY + ",no-resolve",
     "RULE-SET,cn_domain,DIRECT",
     "RULE-SET,not_cn_domain," + GROUP.PROXY,
-    "RULE-SET,cn_ip,DIRECT,no-resolve",
-    "GEOIP,CN,DIRECT,no-resolve",
+    "RULE-SET,cn_ip,DIRECT",
+    "GEOIP,CN,DIRECT",
     "MATCH," + GROUP.PROXY,
   ]
 );
