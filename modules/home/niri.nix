@@ -13,6 +13,8 @@ let
     substituteInPlace "$out" --replace-fail 'binds {' 'binds {
       // DMS desktop-shell shortcuts.
       Mod+Space hotkey-overlay-title="Open DMS Launcher" { spawn "dms" "ipc" "spotlight" "toggle"; }
+      Mod+B hotkey-overlay-title="Open Browser: Google Chrome" { spawn "google-chrome"; }
+      Mod+E hotkey-overlay-title="Open File Manager: Nautilus" { spawn "nautilus" "--new-window"; }
       Mod+N hotkey-overlay-title="Toggle Notification Center" { spawn "dms" "ipc" "notifications" "toggle"; }
       Mod+Shift+Comma hotkey-overlay-title="Toggle DMS Settings" { spawn "dms" "ipc" "settings" "toggle"; }
       Mod+P hotkey-overlay-title="Toggle Notepad" { spawn "dms" "ipc" "notepad" "toggle"; }
