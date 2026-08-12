@@ -1,14 +1,6 @@
 {
   description = "Multi-host Nix configuration of zaviro";
 
-  # 为本仓库使用 llm-agents 构建产物时建议 Numtide 二进制缓存。
-  nixConfig = {
-    extra-substituters = [ "https://cache.numtide.com" ];
-    extra-trusted-public-keys = [
-      "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
-    ];
-  };
-
   inputs = {
     # 两台主机与仓库 formatter 统一使用根软件集；具体版本由 flake.lock 固定。
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
