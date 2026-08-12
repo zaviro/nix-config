@@ -3,9 +3,10 @@
 {
   programs.niri.enable = true;
 
-  programs.dms-shell = {
+  programs.noctalia = {
     enable = true;
     systemd.enable = false;
+    recommendedServices.enable = true;
   };
 
   environment.systemPackages = with pkgs; [
