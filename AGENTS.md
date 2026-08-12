@@ -41,13 +41,26 @@ Git 仅作为存储后端和只读兼容层。远端只保留长期 `main` bookm
 按任务命名的 bookmark（如 `agent/<task>`）或 `push-*`；不得建立或共享长期 `next`
 开发线。不得使用 Git 命令修改工作区、历史、refs 或远端状态。
 
-当任务形成逻辑完整的变更并完成验证后，agent 应按
-[`.agents/skills/done-any-edit/SKILL.md`](.agents/skills/done-any-edit/SKILL.md) 的顺序完成当前主机所需的低风险激活：先 `nh os test`，成功后再 `nh os switch`；随后主动使用 `jj commit` 为本次明确 fileset 创建带 Conventional Commit 描述的 change。若用户明确要求暂不提交，则保留匿名 working-copy change 并报告其 ID。提交仍不等于发布，agent 不得因此移动或推送 `main`。
+一个逻辑变更意图默认对应一个最终 Jujutsu change；用户消息、对话回合、验证阶段和
+临时工作 change 都不自动形成最终边界。开始修改前先判断请求是新意图、已有未发布
+change 的延续，还是边界尚不确定。新意图可认领空 `@`；若 `@` 是已完成的其他逻辑
+change，则仅在确认新意图后运行 `jj new`。延续意图直接继续原 Change ID；目标
+change 不在 stack 顶端时，可以在当前 `@` 安全实现和验证，再于交付前 `jj squash`
+回目标；这种临时工作 change 不代表新的最终 change。
+完成验证和激活后，不得仅为“提交”而运行 `jj commit`。若任务演进表明已有 changes
+实际表达同一意图，应在交付前主动使用 `jj squash` 整理为一个 change；只有能够
+独立理解、验证、保留和回滚的修改才保留为多个 changes。最终边界确认后记录逻辑
+change 的 Change ID，但不为结束任务机械运行 `jj new`；是否开启新 change 由下一项
+工作的逻辑意图决定。
+
+激活仍按 [`.agents/skills/done-any-edit/SKILL.md`](.agents/skills/done-any-edit/SKILL.md)
+的顺序执行：先 `nh os test`，行为验证成功后再 `nh os switch`。完成 change 不等于
+发布，agent 不得因此移动或推送 `main`。
 
 除非用户明确要求跨机器，否则只编辑、求值、构建和激活当前主机；共享模块变更
 需要明确接受其跨主机影响。不得提交明文凭证，`home.stateVersion` 与
 `system.stateVersion` 保持 `26.05`。目录重构不得更新 `flake.lock`；只有 input
 拓扑变化才运行 `nix flake lock`，依赖升级必须单独完成和验证。
 
-编辑完成后的格式化、验证、风险激活、回滚、提交和推送流程统一见
+编辑完成后的格式化、验证、风险激活、回滚、change 整理和推送流程统一见
 [`.agents/skills/done-any-edit/SKILL.md](.agents/skills/done-any-edit/SKILL.md)。
