@@ -4,16 +4,39 @@ const GROUP = {
   FALLBACK: "故障转移",
   AI: "AI服务",
   AI_AUTO: "AI自动选择",
+  GOOGLE: "Google服务",
 };
 
 const INFO_NODE_RE =
   "(?i)(剩余|流量|套餐|到期|官网|客服|traffic|expire|official|website|service)";
 const AI_EXCLUDE_RE =
   INFO_NODE_RE + "|(?i)(香港|澳门|俄罗斯|hong kong|macau|macao|russia)";
+// Google 与其他 AI 服务分别维护候选范围，避免调整 Gemini 时改变 Codex 选路。
+// 港澳已在 Gemini Web 支持地区内；节点名称只用于排除明确不支持的俄罗斯。
+const GOOGLE_EXCLUDE_RE =
+  INFO_NODE_RE + "|(?i)(俄罗斯|russia)";
 
 // 个人规则放在公共规则集之前；wenku8.net 及其子域名始终直连。
 const CUSTOM_RULES = [
   "DOMAIN-SUFFIX,wenku8.net,DIRECT",
+];
+
+// 关键域名即使规则集尚未下载也固定走同一 Google 出口；完整域名由 google 规则集补齐。
+const GOOGLE_RULES = [
+  "DOMAIN-SUFFIX,google.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,google.com.hk," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,google," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,goog," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,gstatic.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,googleapis.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,googleusercontent.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,gvt1.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,gvt2.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,gvt3.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,ggpht.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,googletagmanager.com," + GROUP.GOOGLE,
+  "DOMAIN-SUFFIX,google-analytics.com," + GROUP.GOOGLE,
+  "DOMAIN-REGEX,(^|\\.)google\\.[a-z.]+$," + GROUP.GOOGLE,
 ];
 
 // Tailscale 控制面与 DERP 直连，避免其流量经代理往返；
@@ -56,6 +79,7 @@ function ipProvider(fileName) {
 const RULE_PROVIDERS = {
   ai: domainProvider("category-ai-!cn"),
   openai: domainProvider("openai"),
+  google: domainProvider("google"),
   github: domainProvider("github"),
   telegram_domain: domainProvider("telegram"),
   telegram_ip: ipProvider("telegram"),
@@ -101,6 +125,12 @@ const PROXY_GROUPS = [
     "exclude-filter": AI_EXCLUDE_RE,
   },
   healthGroup(GROUP.AI_AUTO, "url-test", AI_EXCLUDE_RE, { tolerance: 100 }),
+  {
+    name: GROUP.GOOGLE,
+    type: "select",
+    "include-all": true,
+    "exclude-filter": GOOGLE_EXCLUDE_RE,
+  },
 ];
 
 const INFRA_RULES = [
@@ -117,18 +147,24 @@ const INFRA_RULES = [
   "IP-CIDR,100.64.0.0/10,DIRECT,no-resolve",
 ];
 
-const MANAGED_RULES = INFRA_RULES.concat(TAILSCALE_RULES, CUSTOM_RULES, [
-  "RULE-SET,ai," + GROUP.AI,
-  "RULE-SET,openai," + GROUP.AI,
-  "RULE-SET,github," + GROUP.PROXY,
-  "RULE-SET,telegram_domain," + GROUP.PROXY,
-  "RULE-SET,telegram_ip," + GROUP.PROXY + ",no-resolve",
-  "RULE-SET,cn_domain,DIRECT",
-  "RULE-SET,not_cn_domain," + GROUP.PROXY,
-  "RULE-SET,cn_ip,DIRECT,no-resolve",
-  "GEOIP,CN,DIRECT,no-resolve",
-  "MATCH," + GROUP.PROXY,
-]);
+const MANAGED_RULES = INFRA_RULES.concat(
+  TAILSCALE_RULES,
+  CUSTOM_RULES,
+  GOOGLE_RULES,
+  [
+    "RULE-SET,google," + GROUP.GOOGLE,
+    "RULE-SET,ai," + GROUP.AI,
+    "RULE-SET,openai," + GROUP.AI,
+    "RULE-SET,github," + GROUP.PROXY,
+    "RULE-SET,telegram_domain," + GROUP.PROXY,
+    "RULE-SET,telegram_ip," + GROUP.PROXY + ",no-resolve",
+    "RULE-SET,cn_domain,DIRECT",
+    "RULE-SET,not_cn_domain," + GROUP.PROXY,
+    "RULE-SET,cn_ip,DIRECT,no-resolve",
+    "GEOIP,CN,DIRECT,no-resolve",
+    "MATCH," + GROUP.PROXY,
+  ]
+);
 
 function main(config, profileName) {
   const proxyCount = Array.isArray(config.proxies) ? config.proxies.length : 0;

@@ -30,3 +30,18 @@ dns:
     geoip-code: CN
   nameserver-policy:
     "+.ts.net": "100.100.100.100#tailscale0"
+    # Google服务 由 script.js 生成；规则集和关键域名共用同一持久化手动出口。
+    "rule-set:google": "https://1.1.1.1/dns-query#Google服务"
+    "+.google.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.google.com.hk": "https://1.1.1.1/dns-query#Google服务"
+    "+.google": "https://1.1.1.1/dns-query#Google服务"
+    "+.goog": "https://1.1.1.1/dns-query#Google服务"
+    "+.gstatic.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.googleapis.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.googleusercontent.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.gvt1.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.gvt2.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.gvt3.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.ggpht.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.googletagmanager.com": "https://1.1.1.1/dns-query#Google服务"
+    "+.google-analytics.com": "https://1.1.1.1/dns-query#Google服务"
