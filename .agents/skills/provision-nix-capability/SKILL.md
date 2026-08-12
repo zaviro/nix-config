@@ -25,8 +25,9 @@ Classify the need before editing.
 
 Treat an unqualified request to “install” a tool as persistent only when the
 context makes that clear. Ask one concise question when the lifetime or scope
-would materially change the result. Default to the current host; require an
-explicit reason before changing a shared module or another host.
+would materially change the result. Default to the current host; change a shared
+module or another host only when the request covers that scope or the user
+explicitly accepts the impact.
 
 Treat a request to avoid host pollution as a request not to add a new
 persistent provider. Audit and disclose an existing persistent provider, but
@@ -83,13 +84,16 @@ new owner replaces an old one, remove the obsolete provider in the same change.
 
 ## Validate and hand off
 
-For any persistent repository edit, read and follow
-`.agents/skills/done-any-edit/SKILL.md`; it owns formatting, evaluation, build,
-activation, commit, and push requirements.
+Before any persistent repository edit, use `$jj-guide` to establish the correct
+Jujutsu change boundary. Before handoff, read and follow `$finish-nix-change`;
+it owns formatting, evaluation, build, activation, and completion evidence.
+Jujutsu history and remote operations remain owned by `$jj-guide`.
 
-Additionally verify that the requested command has the intended effective
-provider after evaluation. After a successful activation on the current host,
-check the actual command only when it materially validates the request.
+Additionally verify that an added or replaced command has the intended effective
+provider after evaluation. For removal, verify that the provider and executable
+are absent and, where applicable, that the service is stopped and generated
+configuration is no longer owned. After a successful activation on the current
+host, check the actual command only when it materially validates the request.
 
 Keep the normal handoff short: state the capability, its owner/scope, and
 activation status. Add a quick-start command, alternatives, or trade-off notes

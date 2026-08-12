@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jujutsu Repository Guide"
+  short_description: "Use Jujutsu safely in this repository"
+  default_prompt: "Use $jj-guide to establish a safe change boundary before editing this repository."
