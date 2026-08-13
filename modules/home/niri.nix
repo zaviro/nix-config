@@ -12,7 +12,6 @@ let
     sed -i '/^    focus-ring {$/,/^    }$/ s/^        \/\/ off$/        off/' "$out"
     substituteInPlace "$out" --replace-fail 'binds {' 'binds {
       // Noctalia desktop-shell shortcuts.
-      Mod+Space hotkey-overlay-title="Open Noctalia Launcher" { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
       Mod+B hotkey-overlay-title="Open Browser: Google Chrome" { spawn "google-chrome"; }
       Mod+E hotkey-overlay-title="Open File Manager: Nautilus" { spawn "nautilus" "--new-window"; }
       Mod+N hotkey-overlay-title="Toggle Control Center" { spawn "noctalia" "msg" "panel-toggle" "control-center"; }
