@@ -5,9 +5,9 @@
     # 两台主机与仓库 formatter 统一使用根软件集；具体版本由 flake.lock 固定。
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    # Disko 跟随默认分支，nixpkgs 与主软件集保持一致。
+    # Disko 跟随 latest 分支，nixpkgs 与主软件集保持一致。
     disko = {
-      url = "github:nix-community/disko";
+      url = "github:nix-community/disko/latest";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -17,11 +17,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Nixvim 与主软件集保持一致。
-    nixvim = {
-      url = "github:nix-community/nixvim/main";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Nixvim 使用上游锁定并测试的 nixpkgs revision。
+    nixvim.url = "github:nix-community/nixvim/main";
 
     # WSL 平台模块跟随主分支，nixpkgs 与主软件集保持一致。
     nixos-wsl = {
@@ -52,20 +49,9 @@
       claudeCodePackage = llm-agents.packages.${system}.claude-code;
       codexPackage = llm-agents.packages.${system}.codex;
 
-      # 适配 Nix 2.25+ 移除 nix fmt 隐式 . 参数
-      # 参考: https://git.dblsaiko.net/lix/diff/doc/manual/rl-next/nix-fmt-default-argument.md
-      nixfmt-wrapper = pkgs.writeShellApplication {
-        name = "nixfmt";
-        runtimeInputs = [ pkgs.nixfmt ];
-        text = ''
-          if [[ $# = 0 ]]; then set -- .; fi
-          exec nixfmt "$@"
-        '';
-      };
-
     in
     {
-      formatter.${system} = nixfmt-wrapper;
+      formatter.${system} = pkgs.nixfmt-tree;
 
       nixosConfigurations."legion-wsl" = nixpkgs.lib.nixosSystem {
         inherit system;
