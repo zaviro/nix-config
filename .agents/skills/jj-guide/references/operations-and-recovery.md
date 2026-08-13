@@ -4,6 +4,16 @@ The operation log is shared by all workspaces and records repository views,
 including bookmarks and each workspace's `@`. Treat it as forensic evidence,
 not as permission to rewind broadly.
 
+After a long build, wait, or concurrent-agent phase, inspect the operation log
+without snapshotting before resuming normal Jujutsu commands:
+
+```bash
+jj --at-op=@ --ignore-working-copy op log -n 5
+```
+
+If unfamiliar operations appeared, re-establish the current change, parent,
+working copies, and diff before continuing.
+
 ## Re-establish a baseline
 
 ```bash
@@ -13,8 +23,9 @@ jj --at-op=@ --ignore-working-copy log -r 'working_copies() | main | main@origin
 ```
 
 Compare operation IDs, username, hostname, workspace, description, and time with
-the task's recorded baseline. `--at-op=@ --ignore-working-copy` prevents this
-first look from snapshotting files or reconciling divergent heads. An unfamiliar
+the last operation known to the task when available. Using `--at-op=@` with
+`--ignore-working-copy` prevents this first look from snapshotting files or
+reconciling divergent heads. With or without a prior baseline, an unfamiliar
 operation requires re-inspection of the current change, parent, and diff before
 any further mutation.
 

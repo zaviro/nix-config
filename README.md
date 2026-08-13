@@ -8,7 +8,3 @@
 系统配置位于 `hosts/`，可复用 NixOS 能力位于 `modules/nixos/`，可复用 Home
 Manager 能力位于 `modules/home/`。每台主机通过自己的 `home.nix` 组合用户配置，
 不暴露独立的 `homeConfigurations`。
-
-编辑前的 Jujutsu change、workspace 与发布流程见
-[`$jj-guide` skill](.agents/skills/jj-guide/SKILL.md)；编辑完成后的格式化、验证、构建
-和激活流程见 [`$finish-nix-change` skill](.agents/skills/finish-nix-change/SKILL.md)。
