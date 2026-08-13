@@ -3,7 +3,15 @@
 Apply this only to the current machine after all required formatting, checks,
 evaluation, and builds succeed. An explicit recovery from an activation already
 begun by this workflow enters directly at **Recover only when activation began**
-with the previously recorded literal recovery point.
+with the previously recorded literal recovery point. If no reliable recovery
+point exists, stop and ask rather than guessing a generation.
+
+## Contents
+
+- Decide whether confirmation is required
+- Record the recovery point
+- Test, verify behavior, then switch
+- Recover only when activation began
 
 ## Decide whether confirmation is required
 

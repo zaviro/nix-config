@@ -1,6 +1,6 @@
 ---
 name: jj-guide
-description: Use Jujutsu safely in this repository. Use before the first repository-file edit, including a newly created file intended for tracking, and for any status, diff, log, change boundary, describe/new/commit, split/squash/rebase, conflict, operation recovery, bookmark, remote, push, or workspace task. Do not use for read-only repository explanation that performs no edits or version-control operations.
+description: Use Jujutsu safely in this repository. Use before editing repository files, dispatching parallel repository writers, or performing Jujutsu status, history, conflict, recovery, bookmark, remote, or workspace work. Do not use for explanations requiring neither edits nor version-control operations.
 ---
 
 # Jujutsu Repository Guide
@@ -13,19 +13,16 @@ Use `$finish-nix-change` after repository edits for formatting, evaluation,
 build, activation, and completion evidence. Keep Jujutsu history and remote
 operations in this skill.
 
-This skill targets the repository's installed Jujutsu version. Run `jj version`
-before relying on version-sensitive syntax and inspect `jj help <command>` if
-the installed version differs from the examples.
-
 ## Keep the mental model straight
 
 - The working copy `@` is already a real commit. Most `jj` commands snapshot
   file edits into it; there is no staging area.
+- `jj status` shows `@`'s diff from its parent as `Working copy changes`; those
+  changes already belong to `@`. Do not treat them as uncommitted or use
+  `commit`, `stash`, or `new` merely to protect them.
 - Prefer stable Change IDs for ownership and rewrite tracking. Commit IDs change
   when a change is rewritten.
 - Bookmarks are explicit names and do not advance automatically.
-- Every workspace has its own working-copy commit, but workspaces share changes,
-  bookmarks, remotes, and the operation log.
 - A successful command can still create conflicted changes. Inspect state after
   every mutation.
 
@@ -34,41 +31,38 @@ the installed version differs from the examples.
 Run:
 
 ```bash
-jj version
-jj --at-op=@ --ignore-working-copy op log -n 5
-```
-
-Stop here if this read-only view reports or reveals concurrent operation heads.
-Load `operations-and-recovery.md` before any command that could integrate them.
-Otherwise continue:
-
-```bash
 jj status
 jj diff --summary
 jj log -r '@ | @- | main | main@origin'
 jj log -r 'main..@' --reversed
-jj --at-op=@ --ignore-working-copy op log -n 3
 ```
 
-Inspect the first operation-log output before allowing `jj status` to snapshot
-the working copy or integrate operation heads. Record the current
-Change ID, parent, diff scope, and post-snapshot operation. New files are
-normally auto-tracked after a snapshot unless ignored; do not use Git staging
-when an expected file is missing.
+Record the current Change ID, parent, diff scope, and intended task base. New
+files are normally auto-tracked after a snapshot unless ignored; do not use Git
+staging when an expected file is missing. If Jujutsu reports stale state,
+divergence, concurrent operations, or unfamiliar rewrites, stop and read
+[operations-and-recovery.md](references/operations-and-recovery.md).
 
-Classify the requested work:
+Do not edit until the new task owns one explicit boundary:
 
-- **Continuation:** Continue the existing Change ID when the request repairs or
-  extends that same semantic unit.
-- **Independent work:** Reuse an empty, unclaimed `@`, or create a new change
-  only after confirming its intended parent and dependency on the current tree.
-- **Uncertain ownership or boundary:** Inspect the relevant changes and diffs.
-  Do not describe, split, squash, rebase, abandon, restore, or undo unknown work.
+- Continue `@` only when it already expresses the same semantic unit.
+- For independent work, reuse an unclaimed empty `@` only when its parent is the
+  intended base; otherwise create a change from the recorded base before editing.
+- If ownership or the base remains unclear after inspection, ask before editing.
+  Do not mutate unknown work.
+
+The agent starting a task owns this decision because it knows the new intent.
+Do not rely on the previous task having prepared the next boundary. Implement a
+possible correction to an earlier change in its own boundary unless `@` is
+already the clear owner, then use
+[fixup-folding.md](references/fixup-folding.md) after validation to decide
+whether to fold, split, or retain it.
 
 Prefer one coherent change for a simple request. Retain multiple changes only
-when each can be independently understood, validated, kept, and reverted. Never
-create a final boundary merely for a user message, validation phase, tool batch,
-or temporary repair.
+when each boundary represents a deliberate step with its own landing or rollback
+decision; explicit dependency between steps is allowed, but technical
+separability alone is insufficient. Never create a final boundary merely for a
+user message, validation phase, tool batch, or temporary repair.
 
 Set or update descriptions non-interactively:
 
@@ -76,22 +70,17 @@ Set or update descriptions non-interactively:
 jj describe -m "<type>(<scope>): <description>"
 ```
 
-Read [changes.md](references/changes.md) before using `new`, `commit`,
-`split`, `squash`, `absorb`, `restore`, `abandon`, or `rebase`.
+Read [changes.md](references/changes.md) before any change-boundary or history
+mutation.
 
 ## Make every mutation explicit and non-interactive
 
-- Never use `-i`, `--interactive`, a TUI, or a command that may open an
-  editor. Supply `-m` for descriptions.
-- For `split`, supply an explicit revision, fileset, and `-m`.
-- When squashing two described changes, supply `-m` or
-  `--use-destination-message`; a bare squash can request an editor.
-- Prefer explicit Change IDs, source revsets, destinations, remotes, and
-  bookmarks. Never use a broad revset merely because it probably selects only
-  this task.
+- Avoid interactive commands, TUIs, and editors. Supply descriptions and
+  selections non-interactively.
+- Use explicit Change IDs, source revsets, filesets, destinations, remotes, and
+  bookmarks. Inspect a non-trivial selector before mutating it.
 - Do not use Git to mutate the working copy, index, history, refs, or remotes.
-- Do not rely on recoverability to justify a mutation. Establish ownership and
-  scope first.
+- Establish ownership and scope before relying on recoverability.
 
 After each mutation, run the smallest useful combination of:
 
@@ -99,19 +88,7 @@ After each mutation, run the smallest useful combination of:
 jj status
 jj log -r '@ | @-'
 jj diff --summary
-jj op log -n 3
 ```
-
-After a long build, activation, wait, or concurrent-agent phase, first inspect
-the operation log without snapshotting or integrating heads:
-
-```bash
-jj --at-op=@ --ignore-working-copy op log -n 5
-```
-
-Compare it with the recorded baseline before continuing. If unfamiliar
-operations appeared, re-establish the current change, parent, and diff before
-running a normal snapshotting command.
 
 ## Finish local history without publishing
 
@@ -124,10 +101,9 @@ jj diff --git
 jj show @
 ```
 
-Inspect every task change, its description, parents, descendants affected by
-rewrites, and scoped conflicts. Use `$finish-nix-change` for validation. If a
-history mutation changes the resulting tree or introduces conflict resolutions,
-repeat the affected validation through `$finish-nix-change`.
+Inspect the owned task changes, descriptions, affected descendants, and scoped
+conflicts. Use `$finish-nix-change` for validation and repeat affected evidence
+when a history mutation changes a validated tree.
 
 Leaving a completed change at `@` is normal. Do not run `jj commit` or
 `jj new` as a ceremonial finalization step. `jj commit -m` is allowed only
@@ -143,13 +119,15 @@ Completion never moves or pushes `main`.
 - Read [conflicts.md](references/conflicts.md) when a file or bookmark conflict
   exists or a rewrite may create one.
 - Read [operations-and-recovery.md](references/operations-and-recovery.md) for
-  undo, operation forensics, divergence, or stale working copies.
+  concurrent-operation checks after a wait, undo, operation forensics,
+  divergence, or stale working copies.
 - Read [bookmarks-and-remotes.md](references/bookmarks-and-remotes.md) for
   fetch, temporary backups, bookmark changes, or any remote operation.
 - Read [publish-main.md](references/publish-main.md) only after the user
   explicitly authorizes publishing or pushing `main`.
-- Read [workspaces.md](references/workspaces.md) before creating, repairing, or
-  removing an additional workspace.
+- Read [workspaces.md](references/workspaces.md) before dispatching parallel
+  agents that may write or snapshot repository state, or before creating,
+  repairing, or removing an additional workspace.
 
 Derived from
 [`mtaran/jj-guide` at `be52f89b26477cc3e97ff23e058c260332c40569`](https://github.com/mtaran/jj-guide/tree/be52f89b26477cc3e97ff23e058c260332c40569)

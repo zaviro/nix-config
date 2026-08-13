@@ -4,6 +4,14 @@ Load this playbook only after the user explicitly requests publication or
 pushes `main`. Ordinary editing, completion, delivery, validation, activation,
 or a request to “commit” does not authorize it.
 
+## Contents
+
+- Fetch and verify remote state
+- Locate and inspect the candidate
+- Establish the fetched remote as the exact base
+- Move and push only `main`
+- Verify publication
+
 Require `$finish-nix-change` to have completed all applicable validation and
 activation first.
 

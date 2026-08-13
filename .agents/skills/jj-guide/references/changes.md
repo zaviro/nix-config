@@ -1,8 +1,14 @@
 # Change Boundaries and History Mutation
 
-Read the current tree, change descriptions, parents, descendants, and operation
-baseline before rewriting history. Preserve user-created boundaries unless the
-task clearly authorizes changing them.
+Read the current tree, change descriptions, parents, and descendants before
+rewriting history. Record an operation baseline without snapshotting:
+
+```bash
+jj --at-op=@ --ignore-working-copy op log -n 5
+```
+
+Preserve user-created boundaries unless the task clearly authorizes changing
+them.
 
 ## Contents
 
@@ -48,9 +54,9 @@ validation succeeded or a response is about to be sent. Do not use
 
 ## Split a mixed change
 
-Confirm that the selected and remaining portions each form a valid,
-independently describable tree. Use a precise fileset and supply the selected
-change's description so no editor opens:
+Confirm that the selected and remaining portions each form a valid, intentional
+step, and make any dependency order explicit. Use a precise fileset and supply
+the selected change's description so no editor opens:
 
 ```bash
 jj split -r <change-id> <fileset> -m "<selected change description>"
@@ -65,8 +71,9 @@ when the same file contains inseparable intents.
 
 ## Squash a correction into its owner
 
-When the source only repairs or completes the destination, keep the destination
-description explicitly:
+First use [fixup-folding.md](fixup-folding.md) to establish that the source is
+owned by the destination and fails the separate-landing test. When folding is
+justified, keep the destination description explicitly:
 
 ```bash
 jj squash --from <source-change-id> --into <destination-change-id> \

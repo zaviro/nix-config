@@ -28,8 +28,7 @@ nix flake update <input-name>
 nix flake update
 ```
 
-Keep a dependency update in an independently understandable and validated
-Jujutsu change. Fully build the current or explicitly targeted affected host,
-evaluate every other actual importer, and report any importer that was not fully
-built. The state-version and credential invariants remain single-sourced in
-`AGENTS.md`.
+Keep a dependency update in a dedicated, intentional, validated Jujutsu change.
+Fully build the current or explicitly targeted affected host, evaluate every
+other actual importer, and report any importer that was not fully built. The
+state-version and credential invariants remain single-sourced in `AGENTS.md`.

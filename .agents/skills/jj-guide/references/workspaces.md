@@ -4,6 +4,10 @@ Default to the current workspace. Add another only when parallel file edits,
 an isolated experiment, or a long-running build materially benefits from a
 separate working copy.
 
+A fresh agent thread or context does not isolate files. Before parallel agents
+write or run snapshotting Jujutsu commands, the coordinator must assign each an
+explicit workspace and working directory.
+
 Workspaces isolate files and `@`; they do not isolate the change graph,
 bookmarks, remotes, or operation log. They do not require a bookmark.
 
@@ -43,9 +47,16 @@ workspace.
 
 ## Work safely in parallel
 
-In the new workspace, establish a fresh operation and change baseline with the
-core `$jj-guide` preflight. Give each concurrent task non-overlapping file
-ownership where practical.
+In each workspace, establish the core `$jj-guide` baseline and record the shared
+operation head without snapshotting:
+
+```bash
+jj --at-op=@ --ignore-working-copy op log -n 5
+```
+
+Give concurrent tasks non-overlapping semantic and file ownership where
+practical, and wait for affected workers to stop before rewriting shared
+ancestors or integrating their changes.
 
 After history mutations, inspect all workspaces:
 
