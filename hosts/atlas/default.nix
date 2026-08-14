@@ -15,6 +15,7 @@
     ../../modules/nixos/tailscale.nix
     ./access.nix
     ./boot.nix
+    ./clash-verge.nix
     ./disko.nix
     ./hardware-configuration.nix
     ./home.nix
@@ -35,13 +36,6 @@
   programs.zsh.enable = true;
   programs.steam.enable = true;
   virtualisation.docker.enable = true;
-
-  programs.clash-verge = {
-    enable = true;
-    serviceMode = true;
-    tunMode = true;
-    autoStart = true;
-  };
 
   nixpkgs.config.allowUnfreePredicate =
     pkg:
