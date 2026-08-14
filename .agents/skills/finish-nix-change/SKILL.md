@@ -50,8 +50,11 @@ run its validator for every added or changed skill, and parse YAML metadata.
 
 For Nix configuration edits or explicit formatting, evaluation, or build work,
 read [validation-and-build.md](references/validation-and-build.md). For
-current-host activation, activation-only work, or recovery from an activation
-already begun, read
+current-host NixOS or embedded Home Manager edits, activation is normal
+completion evidence: proceed through test, agent-selected behavior verification,
+and switch according to the activation reference's risk classification. For
+current-host activation, activation-only work, or
+recovery from an activation already begun, read
 [activation-and-rollback.md](references/activation-and-rollback.md). Recovery
 uses its recorded literal recovery point directly; do not inspect or rebuild a
 mutable tree first. For other activation-only work, first use

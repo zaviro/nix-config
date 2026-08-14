@@ -34,6 +34,18 @@ NixOS 核心命令、系统服务客户端、登录 shell 等确有系统级语�
 工具能力的临时使用、添加、替换和移除流程见
 [`provision-nix-capability` skill](.agents/skills/provision-nix-capability/SKILL.md)。
 
+## 激活自主性与连接安全
+
+当前主机的非破坏性 NixOS 或 Home Manager 改动在完成所需构建后，默认自主执行
+`nh os test`、由 agent 自行设计的相称行为验证与 `nh os switch`。是否请求确认根据
+本次激活的实际副作用、可恢复性、控制通道影响和用户工作中断风险判断。
+
+任何可能中断当前 agent 与机器连接的操作，执行前必须建立不依赖后续工具调用的
+自动恢复路径。受保护的激活、失败恢复和控制通道复检必须包含在同一个有界、非交互
+命令中，并预先启动独立恢复 watchdog。激活必须具备确定恢复点与所需自动恢复路径。
+具体分级与恢复流程由
+[`$finish-nix-change` skill](.agents/skills/finish-nix-change/SKILL.md) 负责。
+
 ## 版本控制政策
 
 本仓库使用 colocated Jujutsu/Git workspace。Jujutsu 管理工作区、历史、bookmark 与
