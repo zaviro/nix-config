@@ -12,12 +12,26 @@ them.
 
 ## Contents
 
+- Write durable, scoped descriptions
 - Start or continue work
 - Understand `jj commit`
 - Split a mixed change
 - Squash a correction into its owner
 - Rebase only an audited set
 - Treat broad rewrite commands as exceptional
+
+## Write durable, scoped descriptions
+
+Use a concise subject that states the change. Add a short body only when the
+reason, intentional boundary, user-visible effect, or critical invariant is not
+obvious from the diff. Summarize material verification in one `Tested:` line
+when that helps future review. A clear subject alone is sufficient for an
+obvious change; never add a body merely by ceremony.
+
+Keep the description scoped to the change. Do not copy session transcripts,
+temporary NixOS generation numbers, store paths, watchdog activity, or other
+deployment ephemera. Put current-state facts in repository documentation or
+code comments, and report detailed validation in the task handoff.
 
 ## Start or continue work
 
