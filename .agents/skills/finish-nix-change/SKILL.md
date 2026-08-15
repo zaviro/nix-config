@@ -62,6 +62,13 @@ mutable tree first. For other activation-only work, first use
 already-built target is available. Pure documentation, comments, and formatting
 do not require activation.
 
+For a current-host activation that can affect the agent control path, use
+[`scripts/guarded-activate`](scripts/guarded-activate) after recording the exact
+built target and recovery generation. Supply a task-specific, read-only health
+command that handles the `test`, `switched`, and `recovered` phases. The helper
+owns activation timeouts, the independent recovery timer, exact profile
+restoration, and watchdog disarming; do not reproduce that orchestration inline.
+
 ## Recheck after history or tree changes
 
 If `$jj-guide` splits, squashes, rebases, resolves conflicts, or otherwise
