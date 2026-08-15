@@ -1,13 +1,15 @@
-# Clash Verge Rev 全局扩展配置：本机路由、DNS 与 Tailscale。
+# Clash Verge Rev 全局扩展配置：本机路由与 DNS。
 
 profile:
   store-selected: true
 
 tun:
   strict-route: true
-  route-exclude-address:
-    - 100.64.0.0/10
-    - fd7a:115c:a1e0::/48
+  # 第一阶段显式清空订阅配置中的排除项；DNS 链路验证通过后再单独加入内网排除。
+  route-exclude-address: []
+  dns-hijack:
+    - any:53
+    - tcp://any:53
 
 dns:
   enable: true
@@ -29,7 +31,6 @@ dns:
     geoip: true
     geoip-code: CN
   nameserver-policy:
-    "+.ts.net": "100.100.100.100#tailscale0"
     # Google服务 由 script.js 生成；规则集和关键域名共用同一持久化手动出口。
     "rule-set:google": "https://1.1.1.1/dns-query#Google服务"
     "+.google.com": "https://1.1.1.1/dns-query#Google服务"
