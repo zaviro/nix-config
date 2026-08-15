@@ -1,0 +1,388 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SELF="$(readlink -f -- "${BASH_SOURCE[0]}")"
+readonly SELF
+HELPER="$(dirname -- "$SELF")/guarded-activate"
+readonly HELPER
+
+log_call() {
+  printf '%s\n' "$*" >>"$TEST_LOG"
+}
+
+replace_link() {
+  local target="$1"
+  local link="$2"
+
+  ln -sfn -- "$target" "$link"
+}
+
+run_shim() {
+  local name
+  name="$(basename -- "$0")"
+
+  case "$name" in
+    sudo)
+      if [[ "${1-}" == -n ]]; then
+        shift
+      fi
+      if (($# == 0)) || [[ "${1-}" == true ]]; then
+        exit 0
+      fi
+      exec "$@"
+      ;;
+    systemd-run)
+      log_call "systemd-run $*"
+      if [[ "${TEST_FAIL_SYSTEMD_RUN:-0}" == 1 ]]; then
+        exit 45
+      fi
+      : >"$TEST_TIMER_STATE"
+      rm -f -- "$TEST_SERVICE_STATE"
+      ;;
+    systemctl)
+      local action="${1-}"
+      shift || true
+      case "$action" in
+        is-active)
+          [[ "${1-}" == --quiet ]] && shift
+          local state
+          case "${1-}" in
+            *.timer) state="$TEST_TIMER_STATE" ;;
+            *.service) state="$TEST_SERVICE_STATE" ;;
+            *) exit 2 ;;
+          esac
+          if [[ -f "$state" ]]; then
+            exit 0
+          fi
+          exit 3
+          ;;
+        restart)
+          log_call "systemctl restart $*"
+          : >"$TEST_TIMER_STATE"
+          ;;
+        stop)
+          log_call "systemctl stop $*"
+          local unit
+          for unit in "$@"; do
+            case "$unit" in
+              *.timer) rm -f -- "$TEST_TIMER_STATE" ;;
+              *.service)
+                if [[ "${TEST_KEEP_SERVICE_ACTIVE:-0}" == 1 ]]; then
+                  : >"$TEST_SERVICE_STATE"
+                else
+                  rm -f -- "$TEST_SERVICE_STATE"
+                fi
+                ;;
+            esac
+          done
+          ;;
+        *)
+          printf 'unexpected systemctl action: %s\n' "$action" >&2
+          exit 2
+          ;;
+      esac
+      ;;
+    nh)
+      log_call "nh $*"
+      [[ "${1-}" == os ]]
+      local phase="${2-}"
+      local target="${3-}"
+      if [[ "${TEST_FAIL_NH:-}" == "$phase" ]]; then
+        exit 42
+      fi
+      case "$phase" in
+        test)
+          replace_link "$target" "$TEST_RUN_CURRENT"
+          ;;
+        switch)
+          replace_link "$target" "$TEST_SYSTEM_PROFILE"
+          replace_link "$target" "$TEST_RUN_CURRENT"
+          ;;
+        *)
+          exit 2
+          ;;
+      esac
+      ;;
+    nix-env)
+      log_call "nix-env $*"
+      if [[ "${TEST_FAIL_RECOVERY:-0}" == 1 ]]; then
+        exit 43
+      fi
+      replace_link "$TEST_RECOVERY_TARGET" "$TEST_SYSTEM_PROFILE"
+      ;;
+    switch-to-configuration)
+      log_call "switch-to-configuration $*"
+      replace_link "$TEST_RECOVERY_TARGET" "$TEST_RUN_CURRENT"
+      ;;
+    recovery-hook)
+      log_call "recovery-hook ${1-}"
+      [[ "${TEST_FAIL_RECOVERY_HOOK:-0}" != 1 ]]
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+run_health_check() {
+  local phase="${2-}"
+  log_call "health $phase"
+
+  if [[ "${TEST_FAIL_HEALTH:-}" == "$phase" ]]; then
+    exit 44
+  fi
+
+  case "$phase" in
+    test)
+      [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_ACTIVATION_TARGET" ]]
+      [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+      ;;
+    switched)
+      [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_ACTIVATION_TARGET" ]]
+      [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_ACTIVATION_TARGET" ]]
+      ;;
+    recovered)
+      [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+      [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+      ;;
+    *)
+      exit 2
+      ;;
+  esac
+}
+
+if [[ "${1-}" == __health ]]; then
+  run_health_check "$@"
+  exit
+fi
+
+case "$(basename -- "$0")" in
+  sudo | systemd-run | systemctl | nh | nix-env | switch-to-configuration | recovery-hook)
+    run_shim "$@"
+    exit
+    ;;
+esac
+
+new_fixture() {
+  TEST_ROOT="$(mktemp -d)"
+  export TEST_ROOT
+  export TEST_LOG="$TEST_ROOT/calls.log"
+  export TEST_TIMER_STATE="$TEST_ROOT/timer-active"
+  export TEST_SERVICE_STATE="$TEST_ROOT/service-active"
+  export TEST_SYSTEM_PROFILE="$TEST_ROOT/profiles/system"
+  export TEST_RUN_CURRENT="$TEST_ROOT/run-current-system"
+  export TEST_RECOVERY_TARGET="$TEST_ROOT/store/recovery-nixos-system-test"
+  export TEST_ACTIVATION_TARGET="$TEST_ROOT/store/target-nixos-system-test"
+  export TEST_RECOVERY_GENERATION=41
+  export TEST_FAIL_NH=""
+  export TEST_FAIL_HEALTH=""
+  export TEST_FAIL_RECOVERY=0
+  export TEST_FAIL_RECOVERY_HOOK=0
+  export TEST_FAIL_SYSTEMD_RUN=0
+  export TEST_KEEP_SERVICE_ACTIVE=0
+
+  mkdir -p \
+    "$TEST_ROOT/bin" \
+    "$TEST_ROOT/profiles" \
+    "$TEST_ROOT/runtime" \
+    "$TEST_RECOVERY_TARGET/bin" \
+    "$TEST_RECOVERY_TARGET/sw/bin" \
+    "$TEST_ACTIVATION_TARGET/bin"
+  : >"$TEST_LOG"
+
+  local shim
+  for shim in sudo systemd-run systemctl nh; do
+    cp -- "$SELF" "$TEST_ROOT/bin/$shim"
+  done
+  cp -- "$SELF" "$TEST_RECOVERY_TARGET/sw/bin/nix-env"
+  ln -s -- "$(command -v bash)" "$TEST_RECOVERY_TARGET/sw/bin/bash"
+  cp -- "$SELF" "$TEST_RECOVERY_TARGET/bin/switch-to-configuration"
+  cp -- "$SELF" "$TEST_ACTIVATION_TARGET/bin/switch-to-configuration"
+  cp -- "$SELF" "$TEST_ROOT/recovery-hook"
+
+  ln -s -- "$TEST_RECOVERY_TARGET" \
+    "$TEST_ROOT/profiles/system-$TEST_RECOVERY_GENERATION-link"
+  ln -s -- "system-$TEST_RECOVERY_GENERATION-link" "$TEST_SYSTEM_PROFILE"
+  ln -s -- "$TEST_RECOVERY_TARGET" "$TEST_RUN_CURRENT"
+}
+
+remove_fixture() {
+  if [[ -n "${TEST_ROOT:-}" && -d "$TEST_ROOT" ]]; then
+    rm -rf -- "$TEST_ROOT"
+  fi
+}
+
+run_helper() {
+  GUARDED_ACTIVATE_ALLOW_TEST_PATHS=1 \
+    GUARDED_ACTIVATE_SYSTEM_PROFILE="$TEST_SYSTEM_PROFILE" \
+    GUARDED_ACTIVATE_RUN_CURRENT_SYSTEM="$TEST_RUN_CURRENT" \
+    GUARDED_ACTIVATE_RUNTIME_DIR="$TEST_ROOT/runtime" \
+    GUARDED_ACTIVATE_NH="$TEST_ROOT/bin/nh" \
+    GUARDED_ACTIVATE_SUDO="$TEST_ROOT/bin/sudo" \
+    GUARDED_ACTIVATE_SYSTEMD_RUN="$TEST_ROOT/bin/systemd-run" \
+    GUARDED_ACTIVATE_SYSTEMCTL="$TEST_ROOT/bin/systemctl" \
+    "$HELPER" \
+    --target "$TEST_ACTIVATION_TARGET" \
+    --recovery-generation "$TEST_RECOVERY_GENERATION" \
+    --recovery-hook "$TEST_ROOT/recovery-hook" \
+    --watchdog-seconds 30 \
+    --step-timeout-seconds 5 \
+    -- "$SELF" __health
+}
+
+assert_log_contains() {
+  local pattern="$1"
+  if ! grep -Fq -- "$pattern" "$TEST_LOG"; then
+    printf 'missing log entry: %s\n' "$pattern" >&2
+    sed -n '1,200p' "$TEST_LOG" >&2
+    exit 1
+  fi
+}
+
+test_success() {
+  new_fixture
+  run_helper
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_ACTIVATION_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_ACTIVATION_TARGET" ]]
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  assert_log_contains 'nh os test'
+  assert_log_contains 'health test'
+  assert_log_contains 'nh os switch'
+  assert_log_contains 'health switched'
+  remove_fixture
+}
+
+test_health_failure_recovers() {
+  new_fixture
+  export TEST_FAIL_HEALTH=test
+  if run_helper; then
+    printf 'health failure unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  assert_log_contains 'nix-env --profile'
+  assert_log_contains 'switch-to-configuration switch'
+  assert_log_contains 'recovery-hook recovered'
+  assert_log_contains 'health recovered'
+  remove_fixture
+}
+
+test_switch_failure_recovers() {
+  new_fixture
+  export TEST_FAIL_NH=switch
+  if run_helper; then
+    printf 'switch failure unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  assert_log_contains 'health recovered'
+  remove_fixture
+}
+
+test_preflight_failure_does_not_recover() {
+  new_fixture
+  if GUARDED_ACTIVATE_ALLOW_TEST_PATHS=1 \
+    GUARDED_ACTIVATE_SYSTEM_PROFILE="$TEST_SYSTEM_PROFILE" \
+    GUARDED_ACTIVATE_RUN_CURRENT_SYSTEM="$TEST_RUN_CURRENT" \
+    "$HELPER" \
+    --target "$TEST_ACTIVATION_TARGET" \
+    --recovery-generation 42 \
+    --watchdog-seconds 30 \
+    --step-timeout-seconds 5 \
+    -- "$SELF" __health; then
+    printf 'preflight mismatch unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ ! -s "$TEST_LOG" ]]
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  remove_fixture
+}
+
+test_watchdog_arm_failure_does_not_activate() {
+  new_fixture
+  export TEST_FAIL_SYSTEMD_RUN=1
+  if run_helper; then
+    printf 'watchdog arm failure unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  [[ ! -f "$TEST_SERVICE_STATE" ]]
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  if grep -Fq -- 'nh os ' "$TEST_LOG"; then
+    printf 'activation ran after watchdog arm failure\n' >&2
+    exit 1
+  fi
+  remove_fixture
+}
+
+test_internal_watchdog_recovery() {
+  new_fixture
+  replace_link "$TEST_ACTIVATION_TARGET" "$TEST_SYSTEM_PROFILE"
+  replace_link "$TEST_ACTIVATION_TARGET" "$TEST_RUN_CURRENT"
+
+  GUARDED_ACTIVATE_ALLOW_TEST_PATHS=1 \
+    "$HELPER" __recover \
+    --activation-target "$TEST_ACTIVATION_TARGET" \
+    --recovery-generation "$TEST_RECOVERY_GENERATION" \
+    --recovery-target "$TEST_RECOVERY_TARGET" \
+    --system-profile "$TEST_SYSTEM_PROFILE" \
+    --run-current-system "$TEST_RUN_CURRENT" \
+    --recovery-hook "$TEST_ROOT/recovery-hook"
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  assert_log_contains 'recovery-hook recovered'
+  remove_fixture
+}
+
+test_failed_recovery_leaves_watchdog_armed() {
+  new_fixture
+  export TEST_FAIL_HEALTH=test
+  export TEST_FAIL_RECOVERY=1
+  if run_helper; then
+    printf 'failed recovery unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ -f "$TEST_TIMER_STATE" ]]
+  remove_fixture
+}
+
+test_active_service_prevents_disarm() {
+  new_fixture
+  export TEST_KEEP_SERVICE_ACTIVE=1
+  if run_helper; then
+    printf 'active recovery service unexpectedly allowed disarm\n' >&2
+    exit 1
+  fi
+
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  [[ -f "$TEST_SERVICE_STATE" ]]
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  remove_fixture
+}
+
+trap remove_fixture EXIT
+
+test_success
+test_health_failure_recovers
+test_switch_failure_recovers
+test_preflight_failure_does_not_recover
+test_watchdog_arm_failure_does_not_activate
+test_internal_watchdog_recovery
+test_failed_recovery_leaves_watchdog_armed
+test_active_service_prevents_disarm
+
+printf 'test-guarded-activate: all tests passed\n'

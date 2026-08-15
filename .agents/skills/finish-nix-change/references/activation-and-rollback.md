@@ -48,6 +48,12 @@ control path, establish recovery that does not depend on another tool call.
   health checks verify either the successful switched state or the recovered
   original state. Only then disarm it.
 
+Use [`../scripts/guarded-activate`](../scripts/guarded-activate) for this guarded
+transaction. It snapshots its recovery payload into the caller's runtime
+directory, arms a transient systemd timer before activation, bounds each step,
+and uses the same exact recovery implementation from both its exit trap and the
+independent timer.
+
 When verification deliberately disrupts service or connectivity state, record
 that state before disruption, restore it on failure, and include state-specific
 behavior and control-channel checks in the protected invocation.
@@ -77,7 +83,50 @@ persistent activation to one immutable build output.
 
 For changes that do not affect the agent control path, run the stages below in
 sequence. For control-path changes, embed these same test, verification, switch,
-and recovery stages in the single protected invocation required above.
+and recovery stages in the single protected invocation required above by using
+the guarded helper.
+
+The helper requires a read-only health command after `--`. It appends one phase
+argument on every invocation:
+
+- `test`: verify the temporary target and the control channel before switching.
+- `switched`: verify the persistent target and the control channel.
+- `recovered`: verify restored task-specific and control-channel state after a
+  failure.
+
+It also exports `GUARDED_ACTIVATE_PHASE`, `GUARDED_ACTIVATE_TARGET`,
+`GUARDED_ACTIVATE_RECOVERY_TARGET`, and
+`GUARDED_ACTIVATE_RECOVERY_GENERATION`. Branch on the phase when desired and
+recovery states differ. Keep the command read-only. If recovery requires an
+additional idempotent state restoration, pass a self-contained executable with
+`--recovery-hook`; it runs as root after the exact generation is restored and
+before recovery verification.
+
+```bash
+system_toplevel='<recorded-literal-store-path>'
+current_generation='<recorded-literal-generation>'
+
+.agents/skills/finish-nix-change/scripts/guarded-activate \
+  --target "$system_toplevel" \
+  --recovery-generation "$current_generation" \
+  -- bash -c '
+    phase="$1"
+    case "$phase" in
+      test | switched)
+        # Verify the requested behavior and control channel.
+        ;;
+      recovered)
+        # Verify the original behavior and control channel.
+        ;;
+    esac
+  ' guarded-health-check
+```
+
+The helper refuses to start when the active system and persistent profile do
+not both match the recorded recovery generation. It verifies that `nh os test`
+does not change the persistent profile, verifies both active and persistent
+links after `nh os switch`, and leaves the watchdog armed if recovery cannot be
+verified.
 
 ```bash
 system_toplevel='<recorded-literal-store-path>'

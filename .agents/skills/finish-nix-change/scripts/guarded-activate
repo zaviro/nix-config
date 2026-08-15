@@ -1,0 +1,566 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+readonly DEFAULT_WATCHDOG_SECONDS=180
+readonly DEFAULT_STEP_TIMEOUT_SECONDS=120
+
+usage() {
+  cat <<'EOF'
+Usage:
+  guarded-activate --target STORE_PATH --recovery-generation NUMBER [options] -- CHECK [ARG...]
+
+Run a bounded NixOS test activation, task-specific checks, persistent switch,
+and post-switch checks while an independent systemd recovery timer is armed.
+
+Required:
+  --target PATH                 Exact built NixOS system closure.
+  --recovery-generation N      Exact currently persistent generation.
+  -- CHECK [ARG...]            Read-only health command. The phase name is
+                               appended as its final argument: test, switched,
+                               or recovered.
+
+Options:
+  --recovery-hook PATH         Optional self-contained executable run as root
+                               after restoring the recovery generation.
+  --watchdog-seconds N         Timer deadline (default: 180).
+  --step-timeout-seconds N     Timeout for each activation/check (default: 120).
+  -h, --help                   Show this help.
+
+The health command also receives these environment variables:
+  GUARDED_ACTIVATE_PHASE
+  GUARDED_ACTIVATE_TARGET
+  GUARDED_ACTIVATE_RECOVERY_TARGET
+  GUARDED_ACTIVATE_RECOVERY_GENERATION
+EOF
+}
+
+fail() {
+  printf 'guarded-activate: %s\n' "$*" >&2
+  return 1
+}
+
+require_value() {
+  local option="$1"
+  local value="${2-}"
+
+  if [[ -z "$value" ]]; then
+    fail "$option requires a value"
+    exit 2
+  fi
+}
+
+require_uint() {
+  local option="$1"
+  local value="$2"
+
+  if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+    fail "$option must be a positive integer"
+    exit 2
+  fi
+}
+
+validate_system_target() {
+  local path="$1"
+
+  if [[ ! -x "$path/bin/switch-to-configuration" ]]; then
+    fail "not an executable NixOS system closure: $path"
+    return 1
+  fi
+
+  if [[ "${GUARDED_ACTIVATE_ALLOW_TEST_PATHS:-0}" != 1 ]] &&
+    [[ ! "$path" == /nix/store/*-nixos-system-* ]]; then
+    fail "system closure is outside /nix/store: $path"
+    return 1
+  fi
+}
+
+resolve_command() {
+  local command_name="$1"
+  local resolved
+  local link_target
+
+  if [[ "$command_name" == */* ]]; then
+    if [[ "$command_name" == /* ]]; then
+      resolved="$command_name"
+    else
+      resolved="$PWD/$command_name"
+    fi
+  else
+    resolved="$(command -v -- "$command_name" || true)"
+  fi
+
+  if [[ -L "$resolved" ]]; then
+    link_target="$(readlink -- "$resolved")"
+    if [[ "$link_target" == /* ]]; then
+      resolved="$link_target"
+    else
+      resolved="$(dirname -- "$resolved")/$link_target"
+    fi
+  fi
+
+  if [[ -z "$resolved" || ! -x "$resolved" ]]; then
+    fail "required command is not executable: $command_name"
+    return 1
+  fi
+
+  printf '%s\n' "$resolved"
+}
+
+internal_recover() {
+  local activation_target=""
+  local recovery_generation=""
+  local recovery_target=""
+  local system_profile=""
+  local run_current_system=""
+  local recovery_hook=""
+
+  while (($# > 0)); do
+    case "$1" in
+      --activation-target)
+        require_value "$1" "${2-}"
+        activation_target="$2"
+        shift 2
+        ;;
+      --recovery-generation)
+        require_value "$1" "${2-}"
+        recovery_generation="$2"
+        shift 2
+        ;;
+      --recovery-target)
+        require_value "$1" "${2-}"
+        recovery_target="$2"
+        shift 2
+        ;;
+      --system-profile)
+        require_value "$1" "${2-}"
+        system_profile="$2"
+        shift 2
+        ;;
+      --run-current-system)
+        require_value "$1" "${2-}"
+        run_current_system="$2"
+        shift 2
+        ;;
+      --recovery-hook)
+        require_value "$1" "${2-}"
+        recovery_hook="$2"
+        shift 2
+        ;;
+      *)
+        fail "unknown internal recovery option: $1"
+        return 2
+        ;;
+    esac
+  done
+
+  require_uint "--recovery-generation" "$recovery_generation"
+  require_value "--activation-target" "$activation_target"
+  require_value "--recovery-target" "$recovery_target"
+  require_value "--system-profile" "$system_profile"
+  require_value "--run-current-system" "$run_current_system"
+
+  export PATH="$recovery_target/sw/bin:${PATH:-}"
+
+  validate_system_target "$recovery_target"
+  validate_system_target "$activation_target"
+
+  local recovery_link="${system_profile}-${recovery_generation}-link"
+  local recovery_nix_env="$recovery_target/sw/bin/nix-env"
+
+  if [[ "$(readlink -f -- "$recovery_link")" != "$recovery_target" ]]; then
+    fail "recovery generation no longer resolves to the pinned target"
+    return 1
+  fi
+  if [[ ! -x "$recovery_nix_env" ]]; then
+    fail "recovery closure does not provide nix-env"
+    return 1
+  fi
+
+  "$recovery_nix_env" --profile "$system_profile" \
+    --switch-generation "$recovery_generation"
+  "$recovery_link/bin/switch-to-configuration" switch
+
+  if [[ -n "$recovery_hook" ]]; then
+    if [[ ! -x "$recovery_hook" ]]; then
+      fail "recovery hook is not executable: $recovery_hook"
+      return 1
+    fi
+    GUARDED_ACTIVATE_PHASE=recovered \
+      GUARDED_ACTIVATE_TARGET="$activation_target" \
+      GUARDED_ACTIVATE_RECOVERY_TARGET="$recovery_target" \
+      GUARDED_ACTIVATE_RECOVERY_GENERATION="$recovery_generation" \
+      "$recovery_hook" recovered
+  fi
+
+  if [[ "$(readlink -f -- "$system_profile")" != "$recovery_target" ]]; then
+    fail "persistent profile recovery verification failed"
+    return 1
+  fi
+  if [[ "$(readlink -f -- "$run_current_system")" != "$recovery_target" ]]; then
+    fail "active system recovery verification failed"
+    return 1
+  fi
+
+  printf 'guarded-activate: restored generation %s (%s)\n' \
+    "$recovery_generation" "$recovery_target"
+}
+
+if [[ "${1-}" == __recover ]]; then
+  shift
+  internal_recover "$@"
+  exit
+fi
+
+target=""
+recovery_generation=""
+recovery_hook=""
+watchdog_seconds="$DEFAULT_WATCHDOG_SECONDS"
+step_timeout_seconds="$DEFAULT_STEP_TIMEOUT_SECONDS"
+declare -a health_command=()
+
+while (($# > 0)); do
+  case "$1" in
+    --target)
+      require_value "$1" "${2-}"
+      target="$2"
+      shift 2
+      ;;
+    --recovery-generation)
+      require_value "$1" "${2-}"
+      recovery_generation="$2"
+      shift 2
+      ;;
+    --recovery-hook)
+      require_value "$1" "${2-}"
+      recovery_hook="$2"
+      shift 2
+      ;;
+    --watchdog-seconds)
+      require_value "$1" "${2-}"
+      watchdog_seconds="$2"
+      shift 2
+      ;;
+    --step-timeout-seconds)
+      require_value "$1" "${2-}"
+      step_timeout_seconds="$2"
+      shift 2
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      health_command=("$@")
+      break
+      ;;
+    *)
+      fail "unknown option: $1"
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+require_value "--target" "$target"
+require_uint "--recovery-generation" "$recovery_generation"
+require_uint "--watchdog-seconds" "$watchdog_seconds"
+require_uint "--step-timeout-seconds" "$step_timeout_seconds"
+
+if ((${#health_command[@]} == 0)); then
+  fail "a health command is required after --"
+  exit 2
+fi
+if ((watchdog_seconds <= step_timeout_seconds + 15)); then
+  fail "--watchdog-seconds must exceed --step-timeout-seconds by more than 15"
+  exit 2
+fi
+
+readonly system_profile="${GUARDED_ACTIVATE_SYSTEM_PROFILE:-/nix/var/nix/profiles/system}"
+readonly run_current_system="${GUARDED_ACTIVATE_RUN_CURRENT_SYSTEM:-/run/current-system}"
+readonly runtime_dir="${GUARDED_ACTIVATE_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/run/user/$UID}}"
+
+validate_system_target "$target"
+
+profile_reference="$(readlink -- "$system_profile")"
+if [[ ! "$profile_reference" =~ system-([0-9]+)-link$ ]]; then
+  fail "cannot determine the persistent generation from $system_profile"
+  exit 1
+fi
+if [[ "${BASH_REMATCH[1]}" != "$recovery_generation" ]]; then
+  fail "recovery generation $recovery_generation is not the current persistent generation ${BASH_REMATCH[1]}"
+  exit 1
+fi
+
+readonly recovery_link="${system_profile}-${recovery_generation}-link"
+recovery_target="$(readlink -f -- "$recovery_link")"
+readonly recovery_target
+validate_system_target "$recovery_target"
+
+if [[ "$(readlink -f -- "$system_profile")" != "$recovery_target" ]]; then
+  fail "persistent profile does not match the recovery generation"
+  exit 1
+fi
+if [[ "$(readlink -f -- "$run_current_system")" != "$recovery_target" ]]; then
+  fail "active system does not match the recovery generation"
+  exit 1
+fi
+
+nh_command="$(resolve_command "${GUARDED_ACTIVATE_NH:-nh}")"
+readonly nh_command
+sudo_command="$(resolve_command "${GUARDED_ACTIVATE_SUDO:-sudo}")"
+readonly sudo_command
+systemd_run_command="$(resolve_command "${GUARDED_ACTIVATE_SYSTEMD_RUN:-systemd-run}")"
+readonly systemd_run_command
+systemctl_command="$(resolve_command "${GUARDED_ACTIVATE_SYSTEMCTL:-systemctl}")"
+readonly systemctl_command
+timeout_command="$(resolve_command "${GUARDED_ACTIVATE_TIMEOUT:-timeout}")"
+readonly timeout_command
+readonly recovery_bash="$recovery_target/sw/bin/bash"
+
+if [[ ! -x "$recovery_bash" ]]; then
+  fail "recovery closure does not provide bash"
+  exit 1
+fi
+
+health_command[0]="$(resolve_command "${health_command[0]}")"
+
+if [[ -n "$recovery_hook" ]]; then
+  recovery_hook="$(resolve_command "$recovery_hook")"
+fi
+
+if [[ ! -d "$runtime_dir" || ! -w "$runtime_dir" ]]; then
+  fail "runtime directory is not writable: $runtime_dir"
+  exit 1
+fi
+
+"$timeout_command" --signal=TERM --kill-after=15s \
+  "${step_timeout_seconds}s" "$sudo_command" -n true
+
+script_path="$(readlink -f -- "${BASH_SOURCE[0]}")"
+readonly script_path
+payload_dir="$(mktemp -d "$runtime_dir/finish-nix-change-guard.XXXXXX")"
+payload_helper="$payload_dir/guarded-activate"
+payload_hook=""
+cp -- "$script_path" "$payload_helper"
+chmod 0700 "$payload_helper"
+
+if [[ -n "$recovery_hook" ]]; then
+  payload_hook="$payload_dir/recovery-hook"
+  cp -- "$recovery_hook" "$payload_hook"
+  chmod 0700 "$payload_hook"
+fi
+
+readonly watchdog_base="finish-nix-change-guard-${UID}-$$"
+readonly watchdog_timer="$watchdog_base.timer"
+readonly watchdog_service="$watchdog_base.service"
+watchdog_armed=0
+activation_started=0
+success=0
+
+declare -a recovery_arguments=(
+  __recover
+  --activation-target "$target"
+  --recovery-generation "$recovery_generation"
+  --recovery-target "$recovery_target"
+  --system-profile "$system_profile"
+  --run-current-system "$run_current_system"
+)
+if [[ -n "$payload_hook" ]]; then
+  recovery_arguments+=(--recovery-hook "$payload_hook")
+fi
+
+cleanup_payload() {
+  if [[ -n "${payload_hook:-}" ]]; then
+    rm -f -- "$payload_hook" || true
+  fi
+  if [[ -n "${payload_helper:-}" ]]; then
+    rm -f -- "$payload_helper" || true
+  fi
+  if [[ -n "${payload_dir:-}" && -d "$payload_dir" ]]; then
+    rmdir -- "$payload_dir" 2>/dev/null || true
+  fi
+}
+
+watchdog_is_active() {
+  run_with_timeout "$sudo_command" -n "$systemctl_command" \
+    is-active --quiet "$watchdog_timer"
+}
+
+unit_is_inactive() {
+  local unit="$1"
+  local status
+
+  if run_with_timeout "$sudo_command" -n "$systemctl_command" \
+    is-active --quiet "$unit"; then
+    fail "watchdog unit remains active: $unit"
+    return 1
+  else
+    status=$?
+  fi
+
+  case "$status" in
+    3 | 4)
+      return 0
+      ;;
+    *)
+      fail "could not verify that $unit is inactive (status $status)"
+      return 1
+      ;;
+  esac
+}
+
+watchdog_is_inactive() {
+  unit_is_inactive "$watchdog_timer" &&
+    unit_is_inactive "$watchdog_service"
+}
+
+arm_watchdog() {
+  watchdog_armed=1
+  run_with_timeout "$sudo_command" -n "$systemd_run_command" \
+    --unit="$watchdog_base" \
+    --description='Guarded NixOS activation recovery' \
+    --on-active="${watchdog_seconds}s" \
+    --timer-property=AccuracySec=1s \
+    --property="TimeoutStartSec=${step_timeout_seconds}s" \
+    --property=Restart=on-failure \
+    --property=RestartSec=5s \
+    --collect \
+    "$recovery_bash" "$payload_helper" "${recovery_arguments[@]}"
+  watchdog_is_active
+  printf 'guarded-activate: armed %s for %ss\n' \
+    "$watchdog_timer" "$watchdog_seconds"
+}
+
+rearm_watchdog() {
+  run_with_timeout "$sudo_command" -n "$systemctl_command" \
+    restart "$watchdog_timer"
+  watchdog_is_active
+}
+
+disarm_watchdog() {
+  run_with_timeout "$sudo_command" -n "$systemctl_command" stop \
+    "$watchdog_timer" "$watchdog_service" >/dev/null 2>&1 || true
+  if ! watchdog_is_inactive; then
+    return 1
+  fi
+  watchdog_armed=0
+}
+
+run_with_timeout() {
+  "$timeout_command" --signal=TERM --kill-after=15s \
+    "${step_timeout_seconds}s" "$@"
+}
+
+run_health_check() {
+  local phase="$1"
+
+  printf 'guarded-activate: running %s health check\n' "$phase"
+  (
+    export GUARDED_ACTIVATE_PHASE="$phase"
+    export GUARDED_ACTIVATE_TARGET="$target"
+    export GUARDED_ACTIVATE_RECOVERY_TARGET="$recovery_target"
+    export GUARDED_ACTIVATE_RECOVERY_GENERATION="$recovery_generation"
+    run_with_timeout "${health_command[@]}" "$phase"
+  )
+}
+
+recover_now() {
+  run_with_timeout "$sudo_command" -n "$recovery_bash" \
+    "$payload_helper" "${recovery_arguments[@]}"
+}
+
+finish_on_exit() {
+  local exit_code="$1"
+  local recovery_ok=1
+
+  trap - EXIT HUP INT TERM
+  set +e
+
+  if ((success == 1)); then
+    cleanup_payload
+    exit "$exit_code"
+  fi
+
+  if ((activation_started == 0)); then
+    if ((watchdog_armed == 1)); then
+      if ! disarm_watchdog; then
+        printf 'guarded-activate: WATCHDOG DISARM FAILED before activation; recovery payload retained\n' >&2
+        exit 90
+      fi
+    fi
+    cleanup_payload
+    exit "$exit_code"
+  fi
+
+  printf 'guarded-activate: activation failed; restoring generation %s\n' \
+    "$recovery_generation" >&2
+
+  recover_now || recovery_ok=0
+  if ((recovery_ok == 1)); then
+    run_health_check recovered || recovery_ok=0
+  fi
+
+  if ((recovery_ok == 1)); then
+    disarm_watchdog || recovery_ok=0
+  fi
+
+  if ((recovery_ok == 1)); then
+    cleanup_payload
+    printf 'guarded-activate: recovery verified\n' >&2
+  else
+    printf 'guarded-activate: RECOVERY VERIFICATION FAILED; watchdog remains armed\n' >&2
+    exit_code=90
+  fi
+
+  exit "$exit_code"
+}
+
+trap 'finish_on_exit $?' EXIT
+trap 'exit 124' HUP INT TERM
+
+arm_watchdog
+
+printf 'guarded-activate: target=%s\n' "$target"
+printf 'guarded-activate: recovery_generation=%s\n' "$recovery_generation"
+printf 'guarded-activate: recovery_target=%s\n' "$recovery_target"
+
+activation_started=1
+run_with_timeout "$nh_command" os test "$target"
+
+if [[ "$(readlink -f -- "$run_current_system")" != "$target" ]]; then
+  fail "test activation did not realize the target system"
+  exit 1
+fi
+if [[ "$(readlink -f -- "$system_profile")" != "$recovery_target" ]]; then
+  fail "test activation unexpectedly changed the persistent profile"
+  exit 1
+fi
+
+rearm_watchdog
+run_health_check test
+
+rearm_watchdog
+run_with_timeout "$nh_command" os switch "$target"
+
+if [[ "$(readlink -f -- "$run_current_system")" != "$target" ]]; then
+  fail "persistent activation did not realize the target system"
+  exit 1
+fi
+if [[ "$(readlink -f -- "$system_profile")" != "$target" ]]; then
+  fail "persistent profile does not resolve to the target system"
+  exit 1
+fi
+
+rearm_watchdog
+run_health_check switched
+
+disarm_watchdog
+success=1
+cleanup_payload
+trap - EXIT HUP INT TERM
+
+printf 'guarded-activate: activation succeeded\n'
+printf 'guarded-activate: active_target=%s\n' \
+  "$(readlink -f -- "$run_current_system")"
