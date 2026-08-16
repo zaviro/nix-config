@@ -48,6 +48,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
       claudeCodePackage = llm-agents.packages.${system}.claude-code;
       codexPackage = llm-agents.packages.${system}.codex;
+      chatgptPackage = llm-agents.packages.${system}.chatgpt;
 
     in
     {
@@ -71,6 +72,7 @@
         specialArgs = {
           inherit
             claudeCodePackage
+            chatgptPackage
             codexPackage
             disko
             home-manager
