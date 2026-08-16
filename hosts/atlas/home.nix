@@ -1,5 +1,6 @@
 {
   claudeCodePackage,
+  chatgptPackage,
   codexPackage,
   nixvim,
   ...
@@ -21,6 +22,7 @@
       stateVersion = "26.05";
       packages = [
         claudeCodePackage
+        chatgptPackage
         codexPackage
       ];
     };
