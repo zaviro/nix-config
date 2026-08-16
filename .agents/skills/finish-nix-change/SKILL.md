@@ -64,10 +64,15 @@ do not require activation.
 
 For a current-host activation that can affect the agent control path, use
 [`scripts/guarded-activate`](scripts/guarded-activate) after recording the exact
-built target and recovery generation. Supply a task-specific, read-only health
-command that handles the `test`, `switched`, and `recovered` phases. The helper
-owns activation timeouts, the independent recovery timer, exact profile
-restoration, and watchdog disarming; do not reproduce that orchestration inline.
+built target and recovery generation. Use its atomic mode when proportional
+checks are known in advance. Use its staged `test` and `finalize` mode when
+evidence discovered after test activation must guide further read-only checks.
+Supply a task-specific health command that handles the `test`, `switched`, and
+`recovered` phases. The helper owns leases, hard deadlines, activation
+timeouts, exact profile restoration, and watchdog disarming; do not reproduce
+that orchestration inline. Read
+[activation-and-rollback.md](references/activation-and-rollback.md) for both
+modes and staged transaction recovery.
 
 ## Recheck after history or tree changes
 

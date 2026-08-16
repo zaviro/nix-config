@@ -11,7 +11,9 @@ point exists, report the missing prerequisite rather than guessing a generation.
 - Classify activation risk
 - Preserve the agent control channel
 - Record the recovery point
-- Test, verify behavior, then switch
+- Choose atomic or staged activation
+- Test, explore, then finalize
+- Activate when the control path is unaffected
 - Recover only when activation began
 
 ## Classify activation risk
@@ -38,10 +40,11 @@ recovery.
 Before any test or activation step that can interrupt the current agent's
 control path, establish recovery that does not depend on another tool call.
 
-- Put test activation, task-specific checks, persistent switch when applicable,
-  failure restoration, and control-channel health checks in one bounded,
-  non-interactive shell invocation. Keep the protected transaction within one
-  tool call and agent turn.
+- Keep test activation, task-specific checks, persistent switch when
+  applicable, failure restoration, and control-channel checks in one bounded
+  transaction. Use one non-interactive invocation when checks are known in
+  advance. A staged transaction may span tool calls only while its independent
+  watchdog remains active and its hard deadline remains fixed.
 - Arm recovery before disruption. Use an exit trap for normal failures and an
   independent watchdog for shell termination or loss of the control channel.
 - Keep the watchdog active until task-specific behavior and control-channel
@@ -79,15 +82,16 @@ printf 'system_toplevel=%s\ncurrent_generation=%s\n' \
 This pins validation, temporary activation, behavior verification, and
 persistent activation to one immutable build output.
 
-## Test, verify behavior, then switch
+## Choose atomic or staged activation
 
-For changes that do not affect the agent control path, run the stages below in
-sequence. For control-path changes, embed these same test, verification, switch,
-and recovery stages in the single protected invocation required above by using
-the guarded helper.
+Use atomic mode for deterministic checks that can be designed before test
+activation. It performs test, health checks, switch, post-switch checks, and
+recovery in one invocation. Use staged mode when observations from the test
+activation must guide multiple read-only commands before deciding whether to
+switch. Do not use staged mode merely to postpone obvious checks.
 
-The helper requires a read-only health command after `--`. It appends one phase
-argument on every invocation:
+Atomic mode and staged `finalize` or `rollback` require a read-only health
+command after `--`. The helper appends one phase argument on every invocation:
 
 - `test`: verify the temporary target and the control channel before switching.
 - `switched`: verify the persistent target and the control channel.
@@ -96,9 +100,10 @@ argument on every invocation:
 
 It also exports `GUARDED_ACTIVATE_PHASE`, `GUARDED_ACTIVATE_TARGET`,
 `GUARDED_ACTIVATE_RECOVERY_TARGET`, and
-`GUARDED_ACTIVATE_RECOVERY_GENERATION`. Branch on the phase when desired and
-recovery states differ. Keep the command read-only. If recovery requires an
-additional idempotent state restoration, pass a self-contained executable with
+`GUARDED_ACTIVATE_RECOVERY_GENERATION`; staged health checks also receive
+`GUARDED_ACTIVATE_TRANSACTION`. Branch on the phase when desired and recovery
+states differ. Keep the command read-only. If recovery requires an additional
+idempotent state restoration, pass a self-contained executable with
 `--recovery-hook`; it runs as root after the exact generation is restored and
 before recovery verification.
 
@@ -127,6 +132,85 @@ not both match the recorded recovery generation. It verifies that `nh os test`
 does not change the persistent profile, verifies both active and persistent
 links after `nh os switch`, and leaves the watchdog armed if recovery cannot be
 verified.
+
+## Test, explore, then finalize
+
+Start a staged transaction with the exact target and recovery generation. The
+watchdog lease must exceed one bounded activation or check. The hard limit caps
+the whole exploratory window, including renewals:
+
+```bash
+system_toplevel='<recorded-literal-store-path>'
+current_generation='<recorded-literal-generation>'
+
+.agents/skills/finish-nix-change/scripts/guarded-activate test \
+  --target "$system_toplevel" \
+  --recovery-generation "$current_generation" \
+  --watchdog-seconds 180 \
+  --max-seconds 900
+```
+
+Record the printed `transaction` ID. The command returns with the target test
+active, the persistent profile unchanged, and recovery armed. Before every
+later staged operation, retain the literal ID and inspect the transaction when
+state may have changed. `status` reports the watchdog as `active`, `recovering`,
+or `inactive`:
+
+```bash
+transaction='<recorded-transaction-id>'
+.agents/skills/finish-nix-change/scripts/guarded-activate status \
+  --transaction "$transaction"
+```
+
+Run agent-selected, read-only exploratory commands while the lease is active.
+Use their outputs to choose further checks. Renew only when more exploration is
+necessary; renewal is refused if it would exceed the original hard deadline:
+
+```bash
+.agents/skills/finish-nix-change/scripts/guarded-activate renew \
+  --transaction "$transaction"
+```
+
+Once the evidence is sufficient, finalize with a read-only health command. The
+helper rechecks the test phase, switches the exact target, checks the switched
+phase, and then disarms recovery:
+
+```bash
+.agents/skills/finish-nix-change/scripts/guarded-activate finalize \
+  --transaction "$transaction" \
+  -- bash -c '
+    phase="$1"
+    case "$phase" in
+      test | switched)
+        # Verify requested behavior and the control channel.
+        ;;
+      recovered)
+        # Verify restored behavior and the control channel.
+        ;;
+    esac
+  ' guarded-health-check
+```
+
+If exploration disproves the change or the task should stop, explicitly
+restore the pinned generation and verify recovery:
+
+```bash
+.agents/skills/finish-nix-change/scripts/guarded-activate rollback \
+  --transaction "$transaction" \
+  -- bash -c '
+    phase="$1"
+    test "$phase" = recovered
+    # Verify restored behavior and the control channel.
+  ' guarded-recovery-check
+```
+
+If the agent disconnects or neither `finalize` nor `rollback` runs before the
+lease expires, the systemd watchdog restores the pinned generation without a
+later tool call. A missing or inactive watchdog is never renewable; the helper
+restores instead. Staged transaction commands do not modify Jujutsu changes or
+descriptions.
+
+## Activate when the control path is unaffected
 
 ```bash
 system_toplevel='<recorded-literal-store-path>'

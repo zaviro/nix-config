@@ -231,6 +231,33 @@ run_helper() {
     -- "$SELF" __health
 }
 
+run_staged() {
+  GUARDED_ACTIVATE_ALLOW_TEST_PATHS=1 \
+    GUARDED_ACTIVATE_SYSTEM_PROFILE="$TEST_SYSTEM_PROFILE" \
+    GUARDED_ACTIVATE_RUN_CURRENT_SYSTEM="$TEST_RUN_CURRENT" \
+    GUARDED_ACTIVATE_RUNTIME_DIR="$TEST_ROOT/runtime" \
+    GUARDED_ACTIVATE_NH="$TEST_ROOT/bin/nh" \
+    GUARDED_ACTIVATE_SUDO="$TEST_ROOT/bin/sudo" \
+    GUARDED_ACTIVATE_SYSTEMD_RUN="$TEST_ROOT/bin/systemd-run" \
+    GUARDED_ACTIVATE_SYSTEMCTL="$TEST_ROOT/bin/systemctl" \
+    "$HELPER" "$@"
+}
+
+start_staged_test() {
+  local output
+  output="$(run_staged test \
+    --target "$TEST_ACTIVATION_TARGET" \
+    --recovery-generation "$TEST_RECOVERY_GENERATION" \
+    --recovery-hook "$TEST_ROOT/recovery-hook" \
+    --watchdog-seconds 30 \
+    --step-timeout-seconds 5 \
+    --max-seconds 60)"
+  printf '%s\n' "$output"
+  TEST_TRANSACTION="$(sed -n 's/^transaction=//p' <<<"$output")"
+  export TEST_TRANSACTION
+  [[ -n "$TEST_TRANSACTION" ]]
+}
+
 assert_log_contains() {
   local pattern="$1"
   if ! grep -Fq -- "$pattern" "$TEST_LOG"; then
@@ -374,6 +401,167 @@ test_active_service_prevents_disarm() {
   remove_fixture
 }
 
+test_staged_finalize_success() {
+  new_fixture
+  start_staged_test
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_ACTIVATION_TARGET" ]]
+  [[ -f "$TEST_TIMER_STATE" ]]
+
+  local status
+  status="$(run_staged status --transaction "$TEST_TRANSACTION")"
+  grep -Fq 'watchdog=active' <<<"$status"
+  grep -Fq "active_target=$TEST_ACTIVATION_TARGET" <<<"$status"
+
+  # The transaction remains protected while the agent performs any number of
+  # task-specific, read-only exploratory commands between test and finalize.
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_ACTIVATION_TARGET" ]]
+  run_staged renew --transaction "$TEST_TRANSACTION"
+  run_staged finalize --transaction "$TEST_TRANSACTION" \
+    -- "$SELF" __health
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_ACTIVATION_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_ACTIVATION_TARGET" ]]
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  [[ ! -d "$TEST_ROOT/runtime/$TEST_TRANSACTION" ]]
+  assert_log_contains 'systemctl restart'
+  assert_log_contains 'health test'
+  assert_log_contains 'nh os switch'
+  assert_log_contains 'health switched'
+  remove_fixture
+}
+
+test_staged_finalize_failure_recovers() {
+  new_fixture
+  start_staged_test
+  export TEST_FAIL_HEALTH=test
+
+  if run_staged finalize --transaction "$TEST_TRANSACTION" \
+    -- "$SELF" __health; then
+    printf 'staged finalize health failure unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  [[ ! -d "$TEST_ROOT/runtime/$TEST_TRANSACTION" ]]
+  assert_log_contains 'recovery-hook recovered'
+  assert_log_contains 'health recovered'
+  remove_fixture
+}
+
+test_staged_test_failure_recovers() {
+  new_fixture
+  export TEST_FAIL_NH=test
+
+  if start_staged_test; then
+    printf 'staged test activation failure unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  if find "$TEST_ROOT/runtime" -mindepth 1 -print -quit | grep -q .; then
+    printf 'failed staged test left transaction state behind\n' >&2
+    exit 1
+  fi
+  remove_fixture
+}
+
+test_staged_switch_failure_recovers() {
+  new_fixture
+  start_staged_test
+  export TEST_FAIL_NH=switch
+
+  if run_staged finalize --transaction "$TEST_TRANSACTION" \
+    -- "$SELF" __health; then
+    printf 'staged switch failure unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  [[ ! -d "$TEST_ROOT/runtime/$TEST_TRANSACTION" ]]
+  assert_log_contains 'health recovered'
+  remove_fixture
+}
+
+test_staged_explicit_rollback() {
+  new_fixture
+  start_staged_test
+
+  run_staged rollback --transaction "$TEST_TRANSACTION" \
+    -- "$SELF" __health
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ ! -f "$TEST_TIMER_STATE" ]]
+  [[ ! -d "$TEST_ROOT/runtime/$TEST_TRANSACTION" ]]
+  assert_log_contains 'health recovered'
+  remove_fixture
+}
+
+test_staged_hard_deadline_blocks_renewal() {
+  new_fixture
+  start_staged_test
+  printf '%s\n' "$(( $(date +%s) + 1 ))" \
+    >"$TEST_ROOT/runtime/$TEST_TRANSACTION/max-deadline"
+
+  if run_staged renew --transaction "$TEST_TRANSACTION"; then
+    printf 'renewal beyond hard deadline unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ -f "$TEST_TIMER_STATE" ]]
+  run_staged rollback --transaction "$TEST_TRANSACTION" \
+    -- "$SELF" __health
+  remove_fixture
+}
+
+test_staged_missing_watchdog_recovers_on_renew() {
+  new_fixture
+  start_staged_test
+  rm -f -- "$TEST_TIMER_STATE"
+
+  if run_staged renew --transaction "$TEST_TRANSACTION"; then
+    printf 'unsafe staged renewal unexpectedly succeeded\n' >&2
+    exit 1
+  fi
+
+  [[ "$(readlink -f -- "$TEST_SYSTEM_PROFILE")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ "$(readlink -f -- "$TEST_RUN_CURRENT")" == "$TEST_RECOVERY_TARGET" ]]
+  [[ ! -d "$TEST_ROOT/runtime/$TEST_TRANSACTION" ]]
+  remove_fixture
+}
+
+test_staged_active_recovery_owns_rollback() {
+  new_fixture
+  start_staged_test
+  rm -f -- "$TEST_TIMER_STATE"
+  : >"$TEST_SERVICE_STATE"
+
+  local status
+  status="$(run_staged status --transaction "$TEST_TRANSACTION")"
+  grep -Fq 'watchdog=recovering' <<<"$status"
+
+  if run_staged finalize --transaction "$TEST_TRANSACTION" \
+    -- "$SELF" __health; then
+    printf 'staged finalize raced an active recovery service\n' >&2
+    exit 1
+  fi
+
+  [[ -f "$TEST_SERVICE_STATE" ]]
+  if grep -Fq -- 'nix-env --profile' "$TEST_LOG"; then
+    printf 'finalize duplicated an active watchdog recovery\n' >&2
+    exit 1
+  fi
+  remove_fixture
+}
+
 trap remove_fixture EXIT
 
 test_success
@@ -384,5 +572,13 @@ test_watchdog_arm_failure_does_not_activate
 test_internal_watchdog_recovery
 test_failed_recovery_leaves_watchdog_armed
 test_active_service_prevents_disarm
+test_staged_finalize_success
+test_staged_finalize_failure_recovers
+test_staged_test_failure_recovers
+test_staged_switch_failure_recovers
+test_staged_explicit_rollback
+test_staged_hard_deadline_blocks_renewal
+test_staged_missing_watchdog_recovers_on_renew
+test_staged_active_recovery_owns_rollback
 
 printf 'test-guarded-activate: all tests passed\n'
