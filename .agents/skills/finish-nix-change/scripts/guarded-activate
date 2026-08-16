@@ -4,14 +4,23 @@ set -Eeuo pipefail
 
 readonly DEFAULT_WATCHDOG_SECONDS=180
 readonly DEFAULT_STEP_TIMEOUT_SECONDS=120
+readonly DEFAULT_MAX_TRANSACTION_SECONDS=900
 
 usage() {
   cat <<'EOF'
 Usage:
   guarded-activate --target STORE_PATH --recovery-generation NUMBER [options] -- CHECK [ARG...]
+  guarded-activate test --target STORE_PATH --recovery-generation NUMBER [options]
+  guarded-activate status --transaction ID
+  guarded-activate renew --transaction ID
+  guarded-activate finalize --transaction ID -- CHECK [ARG...]
+  guarded-activate rollback --transaction ID -- CHECK [ARG...]
 
 Run a bounded NixOS test activation, task-specific checks, persistent switch,
 and post-switch checks while an independent systemd recovery timer is armed.
+The subcommands provide a staged alternative: test returns while recovery stays
+armed, finalize switches only after agent-directed exploration, and rollback or
+lease expiry restores the pinned generation.
 
 Required:
   --target PATH                 Exact built NixOS system closure.
@@ -25,6 +34,8 @@ Options:
                                after restoring the recovery generation.
   --watchdog-seconds N         Timer deadline (default: 180).
   --step-timeout-seconds N     Timeout for each activation/check (default: 120).
+  --max-seconds N              Staged transaction hard limit (default: 900).
+  --transaction ID             Staged transaction printed by test.
   -h, --help                   Show this help.
 
 The health command also receives these environment variables:
@@ -32,6 +43,7 @@ The health command also receives these environment variables:
   GUARDED_ACTIVATE_TARGET
   GUARDED_ACTIVATE_RECOVERY_TARGET
   GUARDED_ACTIVATE_RECOVERY_GENERATION
+  GUARDED_ACTIVATE_TRANSACTION (staged health checks only)
 EOF
 }
 
@@ -211,6 +223,532 @@ if [[ "${1-}" == __recover ]]; then
   internal_recover "$@"
   exit
 fi
+
+staged_runtime_dir() {
+  printf '%s\n' "${GUARDED_ACTIVATE_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/run/user/$UID}}"
+}
+
+staged_transaction_dir() {
+  local transaction="$1"
+  local runtime_dir
+
+  if [[ ! "$transaction" =~ ^finish-nix-change-guard\.[A-Za-z0-9]+$ ]]; then
+    fail "invalid staged transaction ID: $transaction"
+    return 2
+  fi
+  runtime_dir="$(staged_runtime_dir)"
+  printf '%s/%s\n' "$runtime_dir" "$transaction"
+}
+
+staged_write_field() {
+  local directory="$1"
+  local name="$2"
+  local value="$3"
+
+  if [[ "$value" == *$'\n'* ]]; then
+    fail "staged transaction field contains a newline: $name"
+    return 1
+  fi
+  printf '%s\n' "$value" >"$directory/$name"
+}
+
+staged_read_field() {
+  local directory="$1"
+  local name="$2"
+
+  if [[ ! -f "$directory/$name" ]]; then
+    fail "staged transaction is missing field: $name"
+    return 1
+  fi
+  IFS= read -r REPLY <"$directory/$name"
+  printf '%s\n' "$REPLY"
+}
+
+staged_load() {
+  local transaction="$1"
+
+  transaction_dir="$(staged_transaction_dir "$transaction")"
+  if [[ ! -d "$transaction_dir" ]]; then
+    fail "staged transaction does not exist: $transaction"
+    return 1
+  fi
+
+  target="$(staged_read_field "$transaction_dir" target)"
+  recovery_generation="$(staged_read_field "$transaction_dir" recovery-generation)"
+  recovery_target="$(staged_read_field "$transaction_dir" recovery-target)"
+  system_profile="$(staged_read_field "$transaction_dir" system-profile)"
+  run_current_system="$(staged_read_field "$transaction_dir" run-current-system)"
+  watchdog_seconds="$(staged_read_field "$transaction_dir" watchdog-seconds)"
+  step_timeout_seconds="$(staged_read_field "$transaction_dir" step-timeout-seconds)"
+  max_deadline="$(staged_read_field "$transaction_dir" max-deadline)"
+  watchdog_timer="$(staged_read_field "$transaction_dir" watchdog-timer)"
+  watchdog_service="$(staged_read_field "$transaction_dir" watchdog-service)"
+  payload_helper="$transaction_dir/guarded-activate"
+  payload_hook=""
+  if [[ -x "$transaction_dir/recovery-hook" ]]; then
+    payload_hook="$transaction_dir/recovery-hook"
+  fi
+
+  require_uint "recovery-generation" "$recovery_generation"
+  require_uint "watchdog-seconds" "$watchdog_seconds"
+  require_uint "step-timeout-seconds" "$step_timeout_seconds"
+  require_uint "max-deadline" "$max_deadline"
+  validate_system_target "$target"
+  validate_system_target "$recovery_target"
+  if [[ ! -x "$payload_helper" ]]; then
+    fail "staged recovery helper is unavailable"
+    return 1
+  fi
+}
+
+staged_resolve_commands() {
+  nh_command="$(resolve_command "${GUARDED_ACTIVATE_NH:-nh}")"
+  sudo_command="$(resolve_command "${GUARDED_ACTIVATE_SUDO:-sudo}")"
+  systemd_run_command="$(resolve_command "${GUARDED_ACTIVATE_SYSTEMD_RUN:-systemd-run}")"
+  systemctl_command="$(resolve_command "${GUARDED_ACTIVATE_SYSTEMCTL:-systemctl}")"
+  timeout_command="$(resolve_command "${GUARDED_ACTIVATE_TIMEOUT:-timeout}")"
+}
+
+staged_run_with_timeout() {
+  "$timeout_command" --signal=TERM --kill-after=15s \
+    "${step_timeout_seconds}s" "$@"
+}
+
+staged_unit_is_inactive() {
+  local unit="$1"
+  local status
+
+  if staged_run_with_timeout "$sudo_command" -n "$systemctl_command" \
+    is-active --quiet "$unit"; then
+    fail "watchdog unit remains active: $unit"
+    return 1
+  else
+    status=$?
+  fi
+  [[ "$status" == 3 || "$status" == 4 ]]
+}
+
+staged_recovery_is_active() {
+  staged_run_with_timeout "$sudo_command" -n "$systemctl_command" \
+    is-active --quiet "$watchdog_service"
+}
+
+staged_watchdog_is_active() {
+  staged_run_with_timeout "$sudo_command" -n "$systemctl_command" \
+    is-active --quiet "$watchdog_timer" &&
+    staged_unit_is_inactive "$watchdog_service"
+}
+
+staged_rearm_watchdog() {
+  local now
+  now="$(date +%s)"
+  if ((now + watchdog_seconds > max_deadline)); then
+    fail "staged transaction cannot renew beyond its hard deadline"
+    return 1
+  fi
+  staged_run_with_timeout "$sudo_command" -n "$systemctl_command" \
+    restart "$watchdog_timer"
+  staged_watchdog_is_active
+}
+
+staged_disarm_watchdog() {
+  staged_run_with_timeout "$sudo_command" -n "$systemctl_command" stop \
+    "$watchdog_timer" "$watchdog_service" >/dev/null 2>&1 || true
+  staged_unit_is_inactive "$watchdog_timer" &&
+    staged_unit_is_inactive "$watchdog_service"
+}
+
+staged_recovery_arguments() {
+  staged_recovery_args=(
+    __recover
+    --activation-target "$target"
+    --recovery-generation "$recovery_generation"
+    --recovery-target "$recovery_target"
+    --system-profile "$system_profile"
+    --run-current-system "$run_current_system"
+  )
+  if [[ -n "$payload_hook" ]]; then
+    staged_recovery_args+=(--recovery-hook "$payload_hook")
+  fi
+}
+
+staged_recover_now() {
+  local recovery_bash="$recovery_target/sw/bin/bash"
+  staged_recovery_arguments
+  staged_run_with_timeout "$sudo_command" -n "$recovery_bash" \
+    "$payload_helper" "${staged_recovery_args[@]}"
+}
+
+staged_run_health() {
+  local phase="$1"
+
+  printf 'guarded-activate: running %s health check\n' "$phase"
+  staged_run_with_timeout env \
+    GUARDED_ACTIVATE_PHASE="$phase" \
+    GUARDED_ACTIVATE_TARGET="$target" \
+    GUARDED_ACTIVATE_RECOVERY_TARGET="$recovery_target" \
+    GUARDED_ACTIVATE_RECOVERY_GENERATION="$recovery_generation" \
+    GUARDED_ACTIVATE_TRANSACTION="$transaction" \
+    "${health_command[@]}" "$phase"
+}
+
+staged_cleanup() {
+  rm -f -- \
+    "$transaction_dir/recovery-hook" \
+    "$transaction_dir/guarded-activate" \
+    "$transaction_dir"/* 2>/dev/null || true
+  rmdir -- "$transaction_dir" 2>/dev/null || true
+}
+
+staged_verify_test_state() {
+  [[ "$(readlink -f -- "$run_current_system")" == "$target" ]] || {
+    fail "staged test target is not active"
+    return 1
+  }
+  [[ "$(readlink -f -- "$system_profile")" == "$recovery_target" ]] || {
+    fail "staged test unexpectedly changed the persistent profile"
+    return 1
+  }
+  staged_watchdog_is_active
+}
+
+staged_parse_transaction_and_health() {
+  transaction=""
+  health_command=()
+  while (($# > 0)); do
+    case "$1" in
+      --transaction)
+        require_value "$1" "${2-}"
+        transaction="$2"
+        shift 2
+        ;;
+      --)
+        shift
+        health_command=("$@")
+        break
+        ;;
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      *)
+        fail "unknown staged option: $1"
+        exit 2
+        ;;
+    esac
+  done
+  require_value "--transaction" "$transaction"
+}
+
+staged_test() {
+  target=""
+  recovery_generation=""
+  recovery_hook=""
+  watchdog_seconds="$DEFAULT_WATCHDOG_SECONDS"
+  step_timeout_seconds="$DEFAULT_STEP_TIMEOUT_SECONDS"
+  max_seconds="$DEFAULT_MAX_TRANSACTION_SECONDS"
+
+  while (($# > 0)); do
+    case "$1" in
+      --target)
+        require_value "$1" "${2-}"
+        target="$2"
+        shift 2
+        ;;
+      --recovery-generation)
+        require_value "$1" "${2-}"
+        recovery_generation="$2"
+        shift 2
+        ;;
+      --recovery-hook)
+        require_value "$1" "${2-}"
+        recovery_hook="$2"
+        shift 2
+        ;;
+      --watchdog-seconds)
+        require_value "$1" "${2-}"
+        watchdog_seconds="$2"
+        shift 2
+        ;;
+      --step-timeout-seconds)
+        require_value "$1" "${2-}"
+        step_timeout_seconds="$2"
+        shift 2
+        ;;
+      --max-seconds)
+        require_value "$1" "${2-}"
+        max_seconds="$2"
+        shift 2
+        ;;
+      -h | --help)
+        usage
+        return 0
+        ;;
+      *)
+        fail "unknown staged test option: $1"
+        return 2
+        ;;
+    esac
+  done
+
+  require_value "--target" "$target"
+  require_uint "--recovery-generation" "$recovery_generation"
+  require_uint "--watchdog-seconds" "$watchdog_seconds"
+  require_uint "--step-timeout-seconds" "$step_timeout_seconds"
+  require_uint "--max-seconds" "$max_seconds"
+  if ((watchdog_seconds <= step_timeout_seconds + 15)); then
+    fail "--watchdog-seconds must exceed --step-timeout-seconds by more than 15"
+    return 2
+  fi
+  if ((max_seconds < watchdog_seconds)); then
+    fail "--max-seconds must be at least --watchdog-seconds"
+    return 2
+  fi
+
+  system_profile="${GUARDED_ACTIVATE_SYSTEM_PROFILE:-/nix/var/nix/profiles/system}"
+  run_current_system="${GUARDED_ACTIVATE_RUN_CURRENT_SYSTEM:-/run/current-system}"
+  runtime_dir="$(staged_runtime_dir)"
+  validate_system_target "$target"
+
+  profile_reference="$(readlink -- "$system_profile")"
+  if [[ ! "$profile_reference" =~ system-([0-9]+)-link$ ]] ||
+    [[ "${BASH_REMATCH[1]}" != "$recovery_generation" ]]; then
+    fail "recovery generation is not the current persistent generation"
+    return 1
+  fi
+  recovery_target="$(readlink -f -- "${system_profile}-${recovery_generation}-link")"
+  validate_system_target "$recovery_target"
+  [[ "$(readlink -f -- "$system_profile")" == "$recovery_target" ]]
+  [[ "$(readlink -f -- "$run_current_system")" == "$recovery_target" ]]
+  if [[ ! -d "$runtime_dir" || ! -w "$runtime_dir" ]]; then
+    fail "runtime directory is not writable: $runtime_dir"
+    return 1
+  fi
+
+  staged_resolve_commands
+  staged_run_with_timeout "$sudo_command" -n true
+  script_path="$(readlink -f -- "${BASH_SOURCE[0]}")"
+  transaction_dir="$(mktemp -d "$runtime_dir/finish-nix-change-guard.XXXXXX")"
+  transaction="$(basename -- "$transaction_dir")"
+  chmod 0700 "$transaction_dir"
+  payload_helper="$transaction_dir/guarded-activate"
+  payload_hook=""
+  cp -- "$script_path" "$payload_helper"
+  chmod 0700 "$payload_helper"
+  if [[ -n "$recovery_hook" ]]; then
+    recovery_hook="$(resolve_command "$recovery_hook")"
+    payload_hook="$transaction_dir/recovery-hook"
+    cp -- "$recovery_hook" "$payload_hook"
+    chmod 0700 "$payload_hook"
+  fi
+
+  watchdog_base="finish-nix-change-guard-${UID}-${transaction##*.}"
+  watchdog_timer="$watchdog_base.timer"
+  watchdog_service="$watchdog_base.service"
+  started_at="$(date +%s)"
+  max_deadline=$((started_at + max_seconds))
+  staged_write_field "$transaction_dir" target "$target"
+  staged_write_field "$transaction_dir" recovery-generation "$recovery_generation"
+  staged_write_field "$transaction_dir" recovery-target "$recovery_target"
+  staged_write_field "$transaction_dir" system-profile "$system_profile"
+  staged_write_field "$transaction_dir" run-current-system "$run_current_system"
+  staged_write_field "$transaction_dir" watchdog-seconds "$watchdog_seconds"
+  staged_write_field "$transaction_dir" step-timeout-seconds "$step_timeout_seconds"
+  staged_write_field "$transaction_dir" max-deadline "$max_deadline"
+  staged_write_field "$transaction_dir" watchdog-timer "$watchdog_timer"
+  staged_write_field "$transaction_dir" watchdog-service "$watchdog_service"
+
+  staged_recovery_arguments
+  recovery_bash="$recovery_target/sw/bin/bash"
+  activation_started=0
+  test_succeeded=0
+  # shellcheck disable=SC2329 # Invoked by the EXIT trap below.
+  staged_test_exit() {
+    local code="$1"
+    trap - EXIT HUP INT TERM
+    set +e
+    if ((test_succeeded == 1)); then
+      exit "$code"
+    fi
+    if ((activation_started == 1)); then
+      staged_recover_now || true
+    fi
+    staged_disarm_watchdog || true
+    staged_cleanup
+    exit "$code"
+  }
+  trap 'staged_test_exit $?' EXIT
+  trap 'exit 124' HUP INT TERM
+
+  staged_run_with_timeout "$sudo_command" -n "$systemd_run_command" \
+    --unit="$watchdog_base" \
+    --description='Staged guarded NixOS activation recovery' \
+    --on-active="${watchdog_seconds}s" \
+    --timer-property=AccuracySec=1s \
+    --property="TimeoutStartSec=${step_timeout_seconds}s" \
+    --property=Restart=on-failure \
+    --property=RestartSec=5s \
+    --collect \
+    "$recovery_bash" "$payload_helper" "${staged_recovery_args[@]}"
+  staged_watchdog_is_active
+
+  activation_started=1
+  staged_run_with_timeout "$nh_command" os test "$target"
+  staged_verify_test_state
+  test_succeeded=1
+  trap - EXIT HUP INT TERM
+
+  printf 'guarded-activate: staged test active\n'
+  printf 'transaction=%s\n' "$transaction"
+  printf 'target=%s\n' "$target"
+  printf 'recovery_generation=%s\n' "$recovery_generation"
+  printf 'max_deadline=%s\n' "$max_deadline"
+}
+
+staged_status() {
+  staged_parse_transaction_and_health "$@"
+  staged_load "$transaction"
+  staged_resolve_commands
+  now="$(date +%s)"
+  timer_state=inactive
+  if staged_recovery_is_active; then
+    timer_state=recovering
+  elif staged_watchdog_is_active; then
+    timer_state=active
+  fi
+  printf 'transaction=%s\n' "$transaction"
+  printf 'watchdog=%s\n' "$timer_state"
+  printf 'active_target=%s\n' "$(readlink -f -- "$run_current_system")"
+  printf 'persistent_target=%s\n' "$(readlink -f -- "$system_profile")"
+  printf 'target=%s\n' "$target"
+  printf 'recovery_target=%s\n' "$recovery_target"
+  printf 'hard_limit_remaining_seconds=%s\n' "$((max_deadline - now))"
+}
+
+staged_renew() {
+  staged_parse_transaction_and_health "$@"
+  staged_load "$transaction"
+  staged_resolve_commands
+  if staged_recovery_is_active; then
+    fail "staged recovery is already in progress"
+    return 1
+  fi
+  if ! staged_verify_test_state; then
+    staged_recover_now || true
+    staged_disarm_watchdog || true
+    staged_cleanup
+    fail "unsafe staged transaction was rolled back instead of renewed"
+    return 1
+  fi
+  staged_rearm_watchdog
+  printf 'guarded-activate: renewed transaction %s for %ss\n' \
+    "$transaction" "$watchdog_seconds"
+}
+
+staged_prepare_health() {
+  if ((${#health_command[@]} == 0)); then
+    fail "a health command is required after --"
+    return 2
+  fi
+  health_command[0]="$(resolve_command "${health_command[0]}")"
+}
+
+staged_finalize() {
+  staged_parse_transaction_and_health "$@"
+  staged_load "$transaction"
+  staged_resolve_commands
+  staged_prepare_health
+
+  finalize_succeeded=0
+  # shellcheck disable=SC2329 # Invoked by the EXIT trap below.
+  staged_finalize_exit() {
+    local code="$1"
+    local recovery_ok=1
+    trap - EXIT HUP INT TERM
+    set +e
+    if ((finalize_succeeded == 1)); then
+      exit "$code"
+    fi
+    if staged_recovery_is_active; then
+      printf 'guarded-activate: watchdog recovery is already in progress\n' >&2
+      exit 90
+    fi
+    printf 'guarded-activate: finalize failed; restoring generation %s\n' \
+      "$recovery_generation" >&2
+    staged_recover_now || recovery_ok=0
+    if ((recovery_ok == 1)); then
+      staged_run_health recovered || recovery_ok=0
+    fi
+    if ((recovery_ok == 1)); then
+      staged_disarm_watchdog || recovery_ok=0
+    fi
+    if ((recovery_ok == 1)); then
+      staged_cleanup
+    else
+      printf 'guarded-activate: RECOVERY VERIFICATION FAILED; watchdog remains armed\n' >&2
+      code=90
+    fi
+    exit "$code"
+  }
+  trap 'staged_finalize_exit $?' EXIT
+  trap 'exit 124' HUP INT TERM
+
+  staged_verify_test_state
+  staged_rearm_watchdog
+  staged_run_health test
+  staged_rearm_watchdog
+  staged_run_with_timeout "$nh_command" os switch "$target"
+  [[ "$(readlink -f -- "$run_current_system")" == "$target" ]]
+  [[ "$(readlink -f -- "$system_profile")" == "$target" ]]
+  staged_rearm_watchdog
+  staged_run_health switched
+  staged_disarm_watchdog
+  finalize_succeeded=1
+  staged_cleanup
+  trap - EXIT HUP INT TERM
+  printf 'guarded-activate: staged activation finalized\n'
+  printf 'active_target=%s\n' "$(readlink -f -- "$run_current_system")"
+}
+
+staged_rollback() {
+  staged_parse_transaction_and_health "$@"
+  staged_load "$transaction"
+  staged_resolve_commands
+  staged_prepare_health
+  staged_recover_now
+  staged_run_health recovered
+  staged_disarm_watchdog
+  staged_cleanup
+  printf 'guarded-activate: staged activation rolled back\n'
+}
+
+case "${1-}" in
+  test)
+    shift
+    staged_test "$@"
+    exit
+    ;;
+  status)
+    shift
+    staged_status "$@"
+    exit
+    ;;
+  renew)
+    shift
+    staged_renew "$@"
+    exit
+    ;;
+  finalize)
+    shift
+    staged_finalize "$@"
+    exit
+    ;;
+  rollback)
+    shift
+    staged_rollback "$@"
+    exit
+    ;;
+esac
 
 target=""
 recovery_generation=""
@@ -457,13 +995,12 @@ run_health_check() {
   local phase="$1"
 
   printf 'guarded-activate: running %s health check\n' "$phase"
-  (
-    export GUARDED_ACTIVATE_PHASE="$phase"
-    export GUARDED_ACTIVATE_TARGET="$target"
-    export GUARDED_ACTIVATE_RECOVERY_TARGET="$recovery_target"
-    export GUARDED_ACTIVATE_RECOVERY_GENERATION="$recovery_generation"
-    run_with_timeout "${health_command[@]}" "$phase"
-  )
+  run_with_timeout env \
+    GUARDED_ACTIVATE_PHASE="$phase" \
+    GUARDED_ACTIVATE_TARGET="$target" \
+    GUARDED_ACTIVATE_RECOVERY_TARGET="$recovery_target" \
+    GUARDED_ACTIVATE_RECOVERY_GENERATION="$recovery_generation" \
+    "${health_command[@]}" "$phase"
 }
 
 recover_now() {
