@@ -18,6 +18,7 @@
     ./disko.nix
     ./hardware-configuration.nix
     ./home.nix
+    ./memory.nix
     ./storage.nix
   ];
 
