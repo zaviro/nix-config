@@ -2,6 +2,7 @@
   claudeCodePackage,
   chatgptPackage,
   codexPackage,
+  nix-index-database,
   nixvim,
   ...
 }:
@@ -9,6 +10,7 @@
 {
   home-manager.users.zaviro = {
     imports = [
+      nix-index-database.homeModules.default
       nixvim.homeModules.nixvim
       ../../modules/home/bundles/terminal.nix
       ../../modules/home/bundles/desktop.nix
@@ -28,6 +30,8 @@
     };
 
     programs.home-manager.enable = true;
+    programs.nix-index.enable = true;
+    programs.nix-index-database.comma.enable = true;
     programs.nh = {
       enable = true;
       osFlake = "/home/zaviro/nix-config";
