@@ -17,6 +17,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # 为 nix-index 与 comma 提供每周更新的预生成包数据库。
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Nixvim 使用上游锁定并测试的 nixpkgs revision。
     nixvim.url = "github:nix-community/nixvim/main";
 
@@ -38,6 +44,7 @@
       disko,
       nixpkgs,
       home-manager,
+      nix-index-database,
       nixvim,
       nixos-wsl,
       llm-agents,
@@ -76,6 +83,7 @@
             codexPackage
             disko
             home-manager
+            nix-index-database
             nixvim
             ;
         };
