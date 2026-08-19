@@ -22,6 +22,11 @@
     enable = true;
     settings = {
       git.colocate = true;
+      aliases = {
+        d = [ "diff" ];
+        l = [ "log" ];
+        n = [ "new" ];
+      };
       user = {
         name = "zaviro";
         email = "1264166738a@gmail.com";
