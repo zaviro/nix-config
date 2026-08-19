@@ -5,5 +5,6 @@
     ../gammastep.nix
     ../niri.nix
     ../fcitx5.nix
+    ../zed.nix
   ];
 }

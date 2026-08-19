@@ -3,6 +3,7 @@
 {
   home.packages = with pkgs; [
     nixfmt
+    nixd
     devenv
     uv
     python3
@@ -10,8 +11,6 @@
     bun
     just
     watchexec
-    zed-editor
-
   ];
 
   programs.direnv = {
