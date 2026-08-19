@@ -11,6 +11,9 @@
     bun
     just
     watchexec
+    zed-editor
+
+
   ];
 
   programs.jujutsu = {
