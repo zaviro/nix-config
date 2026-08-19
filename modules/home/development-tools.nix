@@ -4,7 +4,6 @@
   home.packages = with pkgs; [
     nixfmt
     devenv
-    direnv
     uv
     python3
     nodejs_24
@@ -13,8 +12,12 @@
     watchexec
     zed-editor
 
-
   ];
+
+  programs.direnv = {
+    enable = true;
+    enableZshIntegration = true;
+  };
 
   programs.jujutsu = {
     enable = true;
