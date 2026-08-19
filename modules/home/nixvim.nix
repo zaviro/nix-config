@@ -1,5 +1,8 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
+let
+  nixLspDispatch = pkgs.callPackage ../../pkgs/nix-lsp-dispatch.nix { };
+in
 {
   programs.nixvim = {
     enable = true;
@@ -57,6 +60,8 @@
 
       ts_ls = {
         enable = true;
+        # devshell 中的 TypeScript LSP 优先，Nixvim 自带版本只作 fallback。
+        packageFallback = true;
         # 限定前端文件类型，避免与其他语言服务器重复接管缓冲区。
         config.filetypes = lib.mkForce [
           "javascript"
@@ -65,7 +70,19 @@
           "typescriptreact"
         ];
       };
-      nixd.enable = true;
+      nixd = {
+        enable = true;
+        # nixd 由 Home Manager 全局提供；统一入口负责 devenv 项目分流。
+        package = null;
+        config = {
+          cmd = [ "${nixLspDispatch}/bin/nix-lsp-dispatch" ];
+          root_markers = [
+            "devenv.nix"
+            "flake.nix"
+            ".git"
+          ];
+        };
+      };
       bashls.enable = true;
       lua_ls.enable = true;
     };
