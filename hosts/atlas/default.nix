@@ -46,6 +46,7 @@
       "spotify"
       "steam"
       "steam-unwrapped"
+      "zsh-abbr"
     ];
 
   hardware = {

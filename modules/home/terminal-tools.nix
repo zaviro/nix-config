@@ -1,5 +1,15 @@
 { pkgs, ... }:
-
+let
+  fzfFiles =
+    "fd --type f --hidden"
+    + " --exclude .git"
+    + " --exclude node_modules"
+    + " --exclude .cache"
+    + " --exclude .local/share"
+    + " --exclude .npm"
+    + " --exclude .pnpm-store"
+    + " --exclude .devenv";
+in
 {
   # 所有主机都需要的用户级工具；系统启动所需软件应留在 NixOS 配置中。
   home.packages = with pkgs; [
@@ -64,16 +74,20 @@
     fzf = {
       enable = true;
       enableZshIntegration = true;
-      defaultCommand = "fd --type f --hidden --follow --exclude .git";
-      fileWidgetCommand = "fd --type f --hidden --follow --exclude .git";
-      changeDirWidgetCommand = "";
+      defaultCommand = fzfFiles;
+      fileWidgetCommand = fzfFiles;
       fileWidgetOptions = [ "--preview 'bat --color=always --style=numbers --line-range=:500 {}'" ];
+      changeDirWidgetCommand = "";
     };
 
     atuin = {
       enable = true;
       enableZshIntegration = true;
       flags = [ "--disable-up-arrow" ];
+      settings = {
+        workspaces = true;
+        enter_accept = false;
+      };
     };
 
     bottom.enable = true;
