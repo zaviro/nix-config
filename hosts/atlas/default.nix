@@ -31,6 +31,15 @@
   };
 
   services.nix-generation-cleanup.keepGenerations = 10;
+  services.nixos-flake-update = {
+    enable = true;
+    repo = "/home/zaviro/nix-config";
+    user = "zaviro";
+    extraTrackedPackages = [
+      "linux"
+      "systemd"
+    ];
+  };
   nix.optimise.automatic = true;
   programs.zsh.enable = true;
   programs.steam.enable = true;
