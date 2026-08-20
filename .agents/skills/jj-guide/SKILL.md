@@ -1,6 +1,6 @@
 ---
 name: jj-guide
-description: Use Jujutsu safely in this repository. Use before editing repository files, dispatching parallel repository writers, or performing Jujutsu status, history, conflict, recovery, bookmark, remote, or workspace work. Do not use for explanations requiring neither edits nor version-control operations.
+description: Use Jujutsu safely in this repository. Use before editing repository files, dispatching parallel repository writers, or performing Jujutsu status, history, conflict, operation recovery, bookmark, remote, or workspace work. Do not use for explanations requiring neither edits nor version-control operations.
 ---
 
 # Jujutsu Repository Guide
@@ -10,8 +10,9 @@ skill implements those policies; it never grants permission to publish, access
 another machine, overwrite another change, or discard user work.
 
 Use `$finish-nix-change` after repository edits for formatting, evaluation,
-build, activation, and completion evidence. Keep Jujutsu history and remote
-operations in this skill.
+build, activation, activation recovery, and completion evidence. Keep Jujutsu
+history, operation recovery, workspaces, bookmarks, and remote operations in
+this skill.
 
 ## Keep the mental model straight
 
@@ -33,7 +34,7 @@ Run:
 ```bash
 jj status
 jj diff --summary
-jj log -r '@ | @- | main | main@origin'
+jj log -r '@ | @- | main | main@origin | next | next@origin'
 jj log -r 'main..@' --reversed
 ```
 
@@ -48,6 +49,8 @@ Do not edit until the new task owns one explicit boundary:
 - Continue `@` only when it already expresses the same semantic unit.
 - For independent work, reuse an unclaimed empty `@` only when its parent is the
   intended base; otherwise create a change from the recorded base before editing.
+- List intended semantic changes before editing. Split a general policy or
+  workflow from a specialized consumer when either can land or roll back alone.
 - If ownership or the base remains unclear after inspection, ask before editing.
   Do not mutate unknown work.
 

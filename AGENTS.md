@@ -53,10 +53,19 @@ NixOS 核心命令、系统服务客户端、登录 shell 等确有系统级语�
 远端写操作；Git 仅作为存储后端和只读兼容层，不得用 Git 修改工作区、index、历史、
 refs 或远端状态。
 
-远端只保留长期 `main` bookmark；本地工作默认位于 `main` 之上的匿名 changes。
-完成、验证和激活都不构成发布授权；只有用户明确要求发布或推送 `main` 时，才可前移
-并推送它。远端备份、跨机器继续或 agent 交接可以使用按任务命名的短期 bookmark 或
-`push-*`，但不得建立长期 `next` 开发线。
+远端长期 bookmark 只有 `main` 与 `next`。`main` 是稳定发布线，只能在用户明确要求发布
+或推送时向前移动；已发布错误以新的 forward change 修正，不得回退、侧移或重写。
+`next` 是云端与本地共同开发所共享的最新已选定实验集成 tip；它不充当日常 change owner，
+本地例行工作保持为位于明确基线之上的匿名 changes。
+
+完成、验证和激活均不构成 `main` 或其他 bookmark 的发布授权。通过
+`$finish-nix-change` 完成本地 change 后，默认将精确的最新已完成实验 tip 同步到
+`next`，除非用户明确要求仅保留本地或必要验证尚未完成；这是仅限 `next` 的常驻发布
+授权。这项常驻授权只涵盖把 `next` 指向该精确已完成 tip 所需的向前、向后、侧向或历史
+改写更新；非 local-only 任务的服务端对象复核是完成门禁。同步必须通过 Jujutsu 基于已
+抓取 remote-tracking state 的 lease safety 推送。远端 tip 与记录 lease 不一致时必须停止
+并重新审阅，不得绕过 lease。远端备份、跨机器继续或 agent 交接可以使用按任务命名的
+短期 bookmark 或 `push-*`，但不得建立其他长期开发线。
 
 change 边界按维护者可能合理地作为不同步骤落地、保留或回滚的有意状态划分，不按消息、
 验证阶段或工具批次划分。步骤之间可以有明确依赖。开始任务的 agent 在首次编辑前负责
@@ -79,6 +88,7 @@ change 边界按维护者可能合理地作为不同步骤落地、保留或回�
 
 修改过仓库文件后，在交付、发布或声称完成前必须使用
 [`$finish-nix-change` skill](.agents/skills/finish-nix-change/SKILL.md)。它负责格式化、
-验证、构建、风险激活、行为验证与回滚；change、恢复、workspace 和远端操作仍由
+验证、构建、风险激活、行为验证以及 activation recovery/rollback；Jujutsu change
+ownership、历史与冲突处理、operation recovery、workspace、bookmark 和远端操作由
 `$jj-guide` 负责。README 面向使用者记录公开事实，AGENTS.md 记录常驻政策，skills
 记录按需工作流，三处不得复制易漂移的命令细节。
