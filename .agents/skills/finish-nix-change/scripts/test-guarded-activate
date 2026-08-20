@@ -23,6 +23,24 @@ run_shim() {
   name="$(basename -- "$0")"
 
   case "$name" in
+    timeout)
+      while (($# > 0)); do
+        case "$1" in
+          --signal=* | --kill-after=*)
+            shift
+            ;;
+          *s)
+            shift
+            break
+            ;;
+          *)
+            printf 'unexpected timeout argument: %s\n' "$1" >&2
+            exit 2
+            ;;
+        esac
+      done
+      exec "$@"
+      ;;
     sudo)
       if [[ "${1-}" == -n ]]; then
         shift
@@ -158,7 +176,7 @@ if [[ "${1-}" == __health ]]; then
 fi
 
 case "$(basename -- "$0")" in
-  sudo | systemd-run | systemctl | nh | nix-env | switch-to-configuration | recovery-hook)
+  timeout | sudo | systemd-run | systemctl | nh | nix-env | switch-to-configuration | recovery-hook)
     run_shim "$@"
     exit
     ;;
@@ -195,6 +213,7 @@ new_fixture() {
   for shim in sudo systemd-run systemctl nh; do
     cp -- "$SELF" "$TEST_ROOT/bin/$shim"
   done
+  ln -s -- "$SELF" "$TEST_ROOT/bin/timeout"
   cp -- "$SELF" "$TEST_RECOVERY_TARGET/sw/bin/nix-env"
   ln -s -- "$(command -v bash)" "$TEST_RECOVERY_TARGET/sw/bin/bash"
   cp -- "$SELF" "$TEST_RECOVERY_TARGET/bin/switch-to-configuration"
@@ -222,6 +241,7 @@ run_helper() {
     GUARDED_ACTIVATE_SUDO="$TEST_ROOT/bin/sudo" \
     GUARDED_ACTIVATE_SYSTEMD_RUN="$TEST_ROOT/bin/systemd-run" \
     GUARDED_ACTIVATE_SYSTEMCTL="$TEST_ROOT/bin/systemctl" \
+    GUARDED_ACTIVATE_TIMEOUT="$TEST_ROOT/bin/timeout" \
     "$HELPER" \
     --target "$TEST_ACTIVATION_TARGET" \
     --recovery-generation "$TEST_RECOVERY_GENERATION" \
@@ -240,6 +260,7 @@ run_staged() {
     GUARDED_ACTIVATE_SUDO="$TEST_ROOT/bin/sudo" \
     GUARDED_ACTIVATE_SYSTEMD_RUN="$TEST_ROOT/bin/systemd-run" \
     GUARDED_ACTIVATE_SYSTEMCTL="$TEST_ROOT/bin/systemctl" \
+    GUARDED_ACTIVATE_TIMEOUT="$TEST_ROOT/bin/timeout" \
     "$HELPER" "$@"
 }
 
