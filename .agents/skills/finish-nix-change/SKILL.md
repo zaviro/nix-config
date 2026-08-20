@@ -105,26 +105,24 @@ Before claiming completion, confirm:
 ## Synchronize the experimental tip
 
 After the local validation, activation, and final-history gates pass, but before
-claiming task completion, synchronize `next` when this invocation completed one
-or more owned repository changes and produced an exact completed experimental
-tip. Validation-only, activation-only, and activation-recovery invocations do
-not select or publish a new tip unless explicitly requested. Skip
-synchronization when the user requested local-only work.
+claiming task completion, synchronize `next` when this invocation produced an
+exact completed experimental tip. A completed change has a final intended
+semantic diff, successful required evidence, and reviewed exact Change ID, tree,
+and ancestry. Validation-only, activation-only, and activation-recovery
+invocations do not select or publish a new tip unless explicitly requested.
+Skip synchronization when the user requested local-only work.
 
 1. Identify the exact tip whose complete included tree and ancestry were
    reviewed and validated. Do not absorb an unrelated or unvalidated
    descendant merely because it is the current working copy.
-2. Return to `$jj-guide` for the lease-safe `next` move, dry run, push, and
-   server verification.
-3. Treat a lease mismatch or failed server verification as incomplete
-   synchronization; re-audit the changed remote state before retrying.
+2. Return to `$jj-guide` to point `next` at that tip and push the exact
+   bookmark. `next` may overwrite its remote target.
 
 This standing workflow authorizes only `next`. It does not authorize moving
 `main`, deleting a source handoff ref, publishing another bookmark, or widening
 deployment or activation scope.
 
 Report the logical Change ID or IDs, validation outcomes, activation status,
-behavior evidence, documentation impact, `next` synchronization status and
-server object when applicable, and remaining risk. If required validation or
-synchronization is incomplete, say so explicitly rather than claiming
-completion.
+behavior evidence, documentation impact, `next` synchronization status, and
+remaining risk. If required validation or synchronization is incomplete, say so
+explicitly rather than claiming completion.
