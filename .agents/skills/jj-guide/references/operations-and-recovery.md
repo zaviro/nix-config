@@ -19,7 +19,8 @@ working copies, and diff before continuing.
 ```bash
 jj --at-op=@ --ignore-working-copy op log -n 10
 jj --at-op=@ --ignore-working-copy status
-jj --at-op=@ --ignore-working-copy log -r 'working_copies() | main | main@origin'
+jj --at-op=@ --ignore-working-copy log -r \
+  'working_copies() | main | main@origin | next | next@origin'
 ```
 
 Compare operation IDs, username, hostname, workspace, description, and time with
