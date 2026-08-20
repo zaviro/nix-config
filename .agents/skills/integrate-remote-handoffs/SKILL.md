@@ -1,6 +1,6 @@
 ---
 name: integrate-remote-handoffs
-description: Discover, audit, adapt, validate, and optionally retire one or more handoff candidates backed by live remote refs. Use for explicit integrate-remote-handoffs invocations or when temporary branches, bookmarks, or refs from another machine, cloud workspace, fork, or agent must be consumed into authoritative local work.
+description: Discover, audit, adapt, validate, and optionally retire one or more handoff candidates backed by live remote refs. Use for explicit integrate-remote-handoffs invocations or when temporary branches, pull requests, bookmarks, or refs from another machine, cloud workspace, fork, or agent must be consumed into authoritative local work.
 ---
 
 # Integrate Remote Handoffs
@@ -11,8 +11,9 @@ deployment, activation, and recovery to repository-local instructions.
 
 ## Resolve the minimal invocation
 
-Accept zero or more refs, URLs, or `ref@oid` locators as optional invocation
-text. Resolve candidates in this order:
+Accept zero or more branch or bookmark names, pull-request URLs,
+remote-qualified refs, or `ref@oid` locators as optional invocation text.
+Resolve candidates in this order:
 
 1. Explicit locators.
 2. The latest handoff receipt in the conversation.
@@ -25,10 +26,14 @@ Record every live candidate ref and object ID, its actual base, and the intended
 local integration tip. An explicit OID pins the request; ask before substituting
 a different live tip.
 
+For a pull-request candidate, also record its canonical base repository,
+request number and state, head repository, head ref and object ID, and base ref
+and object ID. Treat the request record and its head ref as separate resources.
+
 Integration permits live lookup, exact fetch, owned local changes, and
 repository-authorized validation. Publication, source deletion, force update,
-cross-machine writes, deployment, and activation require user or repository
-authority.
+change-request closure, cross-machine writes, deployment, and activation
+require user or repository authority.
 
 ## Triage quickly and in parallel
 
@@ -112,10 +117,33 @@ source refs, stop on concurrent movement, freeze the exact integration tip,
 inspect its outgoing ancestry, and push only the authorized target with lease
 protection. Verify the server object before retiring sources.
 
-Delete only authorized source refs, one at a time, after the published target
-is verified. Source deletion never authorizes discarding local changes or
-recovery history.
+A producer may mark a candidate `ephemeral; eligible for retirement after
+verified integration`. Treat that as lifecycle intent, not deletion or closure
+authority unless the user or repository policy explicitly makes it standing
+authority.
 
-Report source/base OIDs, resulting changes and intentional adaptations,
-per-candidate and combined evidence, published target if any, retired refs, and
-remaining uncertainty.
+Delete only authorized source refs, one at a time, after the published target
+is verified. For a pull-request candidate, retain the request as audit history:
+close an authorized unmerged or superseded request with the verified target
+identity, and delete its ephemeral head ref only when that separate deletion is
+authorized. Never describe a closed request as deleted or infer head-ref
+deletion from request closure. Source deletion never authorizes discarding
+local changes or recovery history.
+
+## Report densely
+
+Omit empty fields, routine command logs, and file lists. Use this compact shape:
+
+```text
+result: <integrated | partial | blocked>
+sources: <ref or PR URL>; head=<ref>@<source-oid>; base=<ref>@<base-oid>
+local: <source -> ordered local change IDs>; <material adaptations or omissions>
+evidence: <per-candidate behavior evidence>; combined=<interaction result>
+published: <target>@<verified-server-oid> | local-only
+retirement: <deleted refs>; <closed or retained requests>; <retained sources and reasons>
+remaining: <risk, skipped evidence, or required user action>
+```
+
+Use exact identities and report only material adaptations, failures, omissions,
+and remaining uncertainty. Never compress away a failed check or an
+unauthorized pending effect.
