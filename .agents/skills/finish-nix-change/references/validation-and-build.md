@@ -23,6 +23,24 @@ After formatting, return to `$jj-guide` and inspect the exact diff because the
 tree may have changed. Stop if `flake.lock` moved without the separately
 authorized input operation.
 
+## Validate an ordered candidate tree
+
+Use `$integrate-remote-handoffs` for remote candidate relationships and
+`$jj-guide` for ordinary local boundaries. Here, record the ordered local
+Change IDs and the behavior claim owned by each, then run formatting and cheap
+structural checks in the owning change.
+
+One final flake check, full build, protected test activation, and switch may
+cover several changes when the exact final tree contains them all, the build
+reaches every affected current-host importer, other actual importers receive
+the evaluation required below, and task-specific checks keep each behavior and
+their interaction attributable. Do not repeat an expensive intermediate build
+solely because the history contains several changes; require it when an
+intermediate state must itself land, be observed, or provide a safety boundary.
+
+If a combined check fails, isolate the responsible change or interaction before
+activation.
+
 ## Select affected hosts
 
 Use the actual import graph rather than path names alone:

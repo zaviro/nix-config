@@ -72,6 +72,11 @@ change 边界按维护者可能合理地作为不同步骤落地、保留或回�
 建立或复用正确的 change；任务结束时不为未知的下一任务预建边界。保持简单请求连贯，
 不得混入、改写或丢弃来源不明、属于用户或其他操作者的工作。
 
+消费远端交接候选时必须使用
+[`$integrate-remote-handoffs` skill](.agents/skills/integrate-remote-handoffs/SKILL.md)；
+该流程不扩大 bookmark 移动、发布、来源删除、激活或跨机器权限。具体 Jujutsu 操作及
+`next` 发布由 `$jj-guide` 负责，Nix 验证与激活证据由 `$finish-nix-change` 负责。
+
 本地明确拥有且未发布的 stack 可以按逻辑 ownership、依赖与审阅价值整理。默认使用
 当前 workspace，额外 workspace 不自动授权 bookmark、远端或发布。首次编辑仓库文件前
 或执行任何 Jujutsu 操作时，必须使用

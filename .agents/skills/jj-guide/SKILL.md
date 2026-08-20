@@ -126,6 +126,9 @@ Completion never moves or pushes `main`.
   divergence, or stale working copies.
 - Read [bookmarks-and-remotes.md](references/bookmarks-and-remotes.md) for
   fetch, temporary backups, bookmark changes, or any remote operation.
+- Read [handoff-integration.md](references/handoff-integration.md) before
+  consuming, adapting, publishing, or deleting one or more remote handoff
+  bookmarks.
 - Read [publish-main.md](references/publish-main.md) only after the user
   explicitly authorizes publishing or pushing `main`.
 - Read [workspaces.md](references/workspaces.md) before dispatching parallel
