@@ -58,14 +58,14 @@ refs 或远端状态。
 `next` 是云端与本地共同开发所共享的最新已选定实验集成 tip；它不充当日常 change owner，
 本地例行工作保持为位于明确基线之上的匿名 changes。
 
-完成、验证和激活均不构成 `main` 或其他 bookmark 的发布授权。通过
-`$finish-nix-change` 完成本地 change 后，默认将精确的最新已完成实验 tip 同步到
-`next`，除非用户明确要求仅保留本地或必要验证尚未完成；这是仅限 `next` 的常驻发布
-授权。这项常驻授权只涵盖把 `next` 指向该精确已完成 tip 所需的向前、向后、侧向或历史
-改写更新；非 local-only 任务的服务端对象复核是完成门禁。同步必须通过 Jujutsu 基于已
-抓取 remote-tracking state 的 lease safety 推送。远端 tip 与记录 lease 不一致时必须停止
-并重新审阅，不得绕过 lease。远端备份、跨机器继续或 agent 交接可以使用按任务命名的
-短期 bookmark 或 `push-*`，但不得建立其他长期开发线。
+一个 change 在其预期语义 diff 已定稿、请求与影响范围要求的验证均已通过，且交付所指的
+精确 Change ID、tree 与 ancestry 已审阅时完成。完成、验证和激活均不构成 `main` 或其他
+bookmark 的发布授权。通过 `$finish-nix-change` 完成的本地 change 默认将其精确的最新
+已完成实验 tip 同步到 `next`，除非用户明确要求仅保留本地。
+
+`next` 是可自由覆盖推送的实验 bookmark：可指向所选已完成实验 tip 的前向、后向、侧向或
+重写历史，并直接覆盖远端 `next`。此常驻授权仅限 `next`；远端备份、跨机器继续或 agent
+交接可以使用按任务命名的短期 bookmark 或 `push-*`，但不得建立其他长期开发线。
 
 change 边界按维护者可能合理地作为不同步骤落地、保留或回滚的有意状态划分，不按消息、
 验证阶段或工具批次划分。步骤之间可以有明确依赖。开始任务的 agent 在首次编辑前负责
