@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integrate Remote Handoffs"
+  short_description: "Audit, integrate, validate, and retire handoffs"
+  default_prompt: "Use $integrate-remote-handoffs to audit and integrate remote handoff candidates into my current work."
