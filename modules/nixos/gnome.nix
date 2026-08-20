@@ -2,7 +2,13 @@
 
 {
   services.xserver.enable = true;
-  services.displayManager.gdm.enable = true;
+  services.displayManager = {
+    gdm.enable = true;
+    autoLogin = {
+      enable = true;
+      user = "zaviro";
+    };
+  };
   services.desktopManager.gnome.enable = true;
 
   # GDM greeter 不会继承守护进程的 XDG_DATA_DIRS，显式注入桌面会话目录。
