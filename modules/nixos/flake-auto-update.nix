@@ -38,7 +38,6 @@ let
       dix_diff="$state_dir/last-dix.diff"
       message_file="$state_dir/message"
       tracked_packages=${lib.escapeShellArg trackedPackagesFile}
-      log_file="$LOGS_DIRECTORY/update.log"
       sudo=/run/wrappers/bin/sudo
       nixos_rebuild=${lib.escapeShellArg nixosRebuild}
       update_change=""
@@ -46,6 +45,8 @@ let
       lock_change=""
       created_update_change=0
       phase="candidate"
+      deferred=0
+      failure_summary="Updater exited unexpectedly"
 
       notify() {
         DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus" \
@@ -53,10 +54,20 @@ let
           || log "warning: desktop notification failed: $1"
       }
 
-      exec >> "$log_file" 2>&1
-
       log() {
-        printf '[%s] %s\n' "$(date --iso-8601=seconds)" "$*"
+        printf '%s\n' "$*"
+      }
+
+      fail() {
+        failure_summary="$1"
+        log "failed: $failure_summary"
+        exit 1
+      }
+
+      defer() {
+        deferred=1
+        log "defer: $1"
+        exit 1
       }
 
       mark_success() {
@@ -114,18 +125,43 @@ let
           exit 0
         fi
 
+        cleanup_ok=1
+        activation_interrupted=0
+
         case "$phase" in
           working-lock)
-            restore_uncommitted_lock || true
+            if ! restore_uncommitted_lock; then
+              cleanup_ok=0
+            fi
             ;;
           validating)
-            safe_abandon_update || true
+            if ! safe_abandon_update; then
+              cleanup_ok=0
+            fi
             ;;
           activating)
+            activation_interrupted=1
             log "critical: updater stopped during activation; preserving update change for recovery"
-            notify "Flake update needs review" "Updater was interrupted during activation; preserving its update change."
             ;;
         esac
+
+        if (( deferred && cleanup_ok )); then
+          exit 0
+        fi
+
+        if (( ! cleanup_ok )); then
+          failure_summary="$failure_summary; automatic cleanup also failed"
+        fi
+
+        if (( activation_interrupted )); then
+          notify \
+            "Flake update needs review" \
+            "Updater was interrupted during activation; preserving its update change."
+        else
+          notify \
+            "Flake update failed" \
+            "$failure_summary. Check: journalctl -u nixos-flake-update.service -e"
+        fi
 
         exit "$rc"
       }
@@ -153,20 +189,17 @@ let
 
       rm -f "$candidate"
       if ! nix flake update --output-lock-file "$candidate"; then
-        log "failed: nix flake update"
-        exit 1
+        fail "nix flake update"
       fi
 
       jj status >/dev/null
       if [[ "$(jj log --no-graph -r @ -T 'commit_id')" != "$initial_commit" ]]; then
-        log "defer: working-copy change moved while resolving the candidate lock"
-        exit 1
+        defer "working-copy change moved while resolving the candidate lock"
       fi
 
       if cmp -s flake.lock "$candidate"; then
         mark_success
         log "success: flake.lock is already current"
-        notify "Flake inputs are current" "No lock-file update was needed."
         exit 0
       fi
 
@@ -183,22 +216,21 @@ let
 
       changed_files=$(jj diff --name-only -r @)
       if [[ "$changed_files" != "flake.lock" ]]; then
-        log "defer: concurrent working-copy changes appeared before source freeze"
-        exit 1
+        defer "concurrent working-copy changes appeared before source freeze"
       fi
 
-      archive_json=$(nix flake archive --json --no-update-lock-file .)
+      if ! archive_json=$(nix flake archive --json --no-update-lock-file .); then
+        fail "freeze flake source in the Nix store"
+      fi
       source_path=$(printf '%s\n' "$archive_json" | jq -r '.path')
       if [[ -z "$source_path" || "$source_path" == "null" || ! -d "$source_path" ]]; then
-        log "failed: could not freeze flake source in the Nix store"
-        exit 1
+        fail "could not resolve frozen flake source in the Nix store"
       fi
 
       jj status >/dev/null
       changed_files=$(jj diff --name-only -r @)
       if [[ "$changed_files" != "flake.lock" ]]; then
-        log "defer: concurrent working-copy changes appeared while freezing source"
-        exit 1
+        defer "concurrent working-copy changes appeared while freezing source"
       fi
 
       jj describe -m "chore: update flake inputs"
@@ -211,8 +243,7 @@ let
       old_system=$(readlink -f /run/current-system)
 
       if ! nix flake check "path:$source_path"; then
-        log "failed: nix flake check"
-        exit 1
+        fail "nix flake check"
       fi
       log "check: ok"
 
@@ -221,12 +252,10 @@ let
           --apply 'configs: builtins.attrNames configs' \
           "path:$source_path#nixosConfigurations"
       ); then
-        log "failed: enumerate nixosConfigurations"
-        exit 1
+        fail "enumerate nixosConfigurations"
       fi
       if ! eval_hosts_text=$(printf '%s\n' "$eval_hosts_json" | jq -r '.[]'); then
-        log "failed: parse nixosConfigurations list"
-        exit 1
+        fail "parse nixosConfigurations list"
       fi
 
       while IFS= read -r eval_host; do
@@ -236,8 +265,7 @@ let
         if ! nix eval --raw \
           "path:$source_path#nixosConfigurations.$eval_host.config.system.build.toplevel.drvPath" \
           >/dev/null; then
-          log "failed: evaluate $eval_host system toplevel"
-          exit 1
+          fail "evaluate $eval_host system toplevel"
         fi
         log "eval: $eval_host ok"
       done <<< "$eval_hosts_text"
@@ -246,16 +274,14 @@ let
         --no-link \
         --print-out-paths \
         "path:$source_path#nixosConfigurations.$host.config.system.build.toplevel"); then
-        log "failed: build $host system toplevel"
-        exit 1
+        fail "build $host system toplevel"
       fi
       log "build: $new_system"
 
       current_update_commit=$(jj log --no-graph -r "$update_change" -T 'commit_id' 2>/dev/null || true)
       if [[ "$current_update_commit" != "$update_commit" ]]; then
         phase="preserve"
-        log "defer: update change was modified concurrently; no history or system action taken"
-        exit 1
+        defer "update change was modified concurrently; no history or system action taken"
       fi
 
       direct_changes=""
@@ -309,25 +335,25 @@ let
       fi
 
       if [[ "$(readlink -f /run/current-system)" != "$old_system" ]]; then
-        log "defer: current system changed during validation"
-        exit 1
+        defer "current system changed during validation"
       fi
 
       current_update_commit=$(jj log --no-graph -r "$update_change" -T 'commit_id' 2>/dev/null || true)
       if [[ "$current_update_commit" != "$update_commit" ]]; then
         phase="preserve"
-        log "defer: update change was modified before activation"
-        exit 1
+        defer "update change was modified before activation"
       fi
 
       phase="activating"
       if ! "$sudo" "$nixos_rebuild" switch --flake "path:$source_path#$host"; then
-        log "failed: nixos-rebuild switch"
+        failure_summary="nixos-rebuild switch"
+        log "failed: $failure_summary"
         if [[ "$(readlink -f /run/current-system)" != "$old_system" ]]; then
           log "rollback: restoring previous NixOS generation"
           if ! "$sudo" "$nixos_rebuild" switch --rollback; then
             phase="preserve"
-            log "critical: rollback failed; preserving update change for manual recovery"
+            failure_summary="nixos-rebuild switch failed and rollback failed; update change preserved for manual recovery"
+            log "critical: $failure_summary"
             exit 1
           fi
         fi
@@ -389,7 +415,6 @@ in
         User = cfg.user;
         WorkingDirectory = cfg.repo;
         StateDirectory = "nixos-flake-update";
-        LogsDirectory = "nixos-flake-update";
         Nice = 19;
         CPUSchedulingPolicy = "idle";
         IOSchedulingClass = "idle";
@@ -407,15 +432,6 @@ in
         RandomizedDelaySec = "1h";
         Unit = "nixos-flake-update.service";
       };
-    };
-
-    services.logrotate.settings.nixos-flake-update = {
-      files = [ "/var/log/nixos-flake-update/update.log" ];
-      frequency = "weekly";
-      rotate = 8;
-      compress = true;
-      missingok = true;
-      notifempty = true;
     };
   };
 }

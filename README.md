@@ -10,4 +10,4 @@ Manager 能力位于 `modules/home/`。每台主机通过自己的 `home.nix` �
 不暴露独立的 `homeConfigurations`。
 `atlas` 每天检查一次自动更新状态；距上次成功检查满 7 天时，会在本地 JJ 历史中
 创建独立的 `flake.lock` 更新 change，完成 Flake 检查和整机 build 后再 switch。
-完整运行日志写入 `/var/log/nixos-flake-update/update.log`，失败不会刷新成功时间。
+运行日志通过 `journalctl -u nixos-flake-update.service` 查看；失败不会刷新成功时间。
