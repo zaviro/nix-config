@@ -1,6 +1,6 @@
 ---
 name: integrate-remote-handoffs
-description: Discover, audit, adapt, validate, and optionally retire one or more handoff candidates backed by live remote refs. Use for explicit integrate-remote-handoffs invocations or when temporary branches, pull requests, bookmarks, or refs from another machine, cloud workspace, fork, or agent must be consumed into authoritative local work.
+description: Discover, audit, adapt, validate, and retire one or more handoff candidates backed by live remote refs. Use for explicit integrate-remote-handoffs invocations or when temporary branches, pull requests, bookmarks, or refs from another machine, cloud workspace, fork, or agent must be consumed into authoritative local work.
 ---
 
 # Integrate Remote Handoffs
@@ -31,9 +31,10 @@ request number and state, head repository, head ref and object ID, and base ref
 and object ID. Treat the request record and its head ref as separate resources.
 
 Integration permits live lookup, exact fetch, owned local changes, and
-repository-authorized validation. Publication, source deletion, force update,
-change-request closure, cross-machine writes, deployment, and activation
-require user or repository authority.
+repository-authorized validation. Publication, force update, change-request
+closure, cross-machine writes, deployment, and activation require user or
+repository authority. A completed, published, and server-verified integration
+must retire its source refs as part of completion.
 
 ## Triage quickly and in parallel
 
@@ -118,17 +119,18 @@ inspect its outgoing ancestry, and push only the authorized target with lease
 protection. Verify the server object before retiring sources.
 
 A producer may mark a candidate `ephemeral; eligible for retirement after
-verified integration`. Treat that as lifecycle intent, not deletion or closure
-authority unless the user or repository policy explicitly makes it standing
-authority.
+verified integration`; this confirms the required lifecycle but does not
+authorize closing a change request.
 
-Delete only authorized source refs, one at a time, after the published target
-is verified. For a pull-request candidate, retain the request as audit history:
+After the published target is verified, delete every integrated source ref one
+at a time. If publication is not authorized or cannot be verified, retain the
+source and report the integration as incomplete rather than claiming task
+completion. For a pull-request candidate, retain the request as audit history:
 close an authorized unmerged or superseded request with the verified target
-identity, and delete its ephemeral head ref only when that separate deletion is
-authorized. Never describe a closed request as deleted or infer head-ref
-deletion from request closure. Source deletion never authorizes discarding
-local changes or recovery history.
+identity, and delete its head ref as the required source retirement. Never
+describe a closed request as deleted or infer head-ref deletion from request
+closure. Source deletion never authorizes discarding local changes or recovery
+history.
 
 ## Report densely
 
