@@ -75,9 +75,12 @@ in
       enable = true;
       enableZshIntegration = true;
       defaultCommand = fzfFiles;
-      fileWidgetCommand = fzfFiles;
-      fileWidgetOptions = [ "--preview 'bat --color=always --style=numbers --line-range=:500 {}'" ];
-      changeDirWidgetCommand = "";
+      fileWidget = {
+        command = fzfFiles;
+        options = [ "--preview 'bat --color=always --style=numbers --line-range=:500 {}'" ];
+      };
+      changeDirWidget.command = "";
+      historyWidget.command = "";
     };
 
     atuin = {
@@ -92,7 +95,4 @@ in
 
     bottom.enable = true;
   };
-
-  # Atuin owns history search; fzf keeps file insertion and fuzzy completion.
-  home.sessionVariables.FZF_CTRL_R_COMMAND = "";
 }
