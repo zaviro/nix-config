@@ -14,8 +14,6 @@ let
   trackedPackagesFile = pkgs.writeText "nixos-flake-update-tracked-packages" (
     lib.concatStringsSep "\n" trackedPackageNames
   );
-  nixosRebuild = "${config.system.build.nixos-rebuild}/bin/nixos-rebuild";
-
   updater = pkgs.writeShellApplication {
     name = "nixos-flake-update";
     runtimeInputs = [
@@ -26,6 +24,7 @@ let
       pkgs.jq
       pkgs.jujutsu
       pkgs.libnotify
+      pkgs.nh
     ];
     text = ''
       repo=${lib.escapeShellArg cfg.repo}
@@ -39,7 +38,8 @@ let
       message_file="$state_dir/message"
       tracked_packages=${lib.escapeShellArg trackedPackagesFile}
       sudo=/run/wrappers/bin/sudo
-      nixos_rebuild=${lib.escapeShellArg nixosRebuild}
+      nh=${lib.escapeShellArg (lib.getExe pkgs.nh)}
+      nix_env=${lib.escapeShellArg "${config.nix.package}/bin/nix-env"}
       update_change=""
       update_commit=""
       lock_change=""
@@ -114,6 +114,38 @@ let
             jj abandon @
             log "removed empty automatic JJ change"
           fi
+        fi
+      }
+
+      restore_exact_generation() {
+        recovery_link="/nix/var/nix/profiles/system-$old_generation-link"
+        if [[ ! -x "$recovery_link/bin/switch-to-configuration" ]]; then
+          log "critical: recovery generation $old_generation is unavailable"
+          return 1
+        fi
+        if [[ "$(readlink -f "$recovery_link")" != "$old_system" ]]; then
+          log "critical: recovery generation $old_generation no longer matches $old_system"
+          return 1
+        fi
+
+        log "rollback: restoring exact NixOS generation $old_generation"
+        if ! "$sudo" "$nix_env" \
+          --profile /nix/var/nix/profiles/system \
+          --switch-generation "$old_generation"; then
+          log "critical: failed to restore the persistent system profile"
+          return 1
+        fi
+        if ! "$sudo" "$recovery_link/bin/switch-to-configuration" switch; then
+          log "critical: failed to reactivate recovery generation $old_generation"
+          return 1
+        fi
+        if [[ "$(readlink -f /run/current-system)" != "$old_system" ]]; then
+          log "critical: active system does not match recovered generation $old_generation"
+          return 1
+        fi
+        if [[ "$(readlink -f /nix/var/nix/profiles/system)" != "$old_system" ]]; then
+          log "critical: persistent profile does not match recovered generation $old_generation"
+          return 1
         fi
       }
 
@@ -241,6 +273,17 @@ let
       log "candidate: $update_change ($update_commit)"
       log "source: $source_path"
       old_system=$(readlink -f /run/current-system)
+      old_profile_system=$(readlink -f /nix/var/nix/profiles/system)
+      old_profile_link=$(readlink /nix/var/nix/profiles/system)
+      if [[ "$old_profile_link" =~ ^system-([0-9]+)-link$ ]]; then
+        old_generation="''${BASH_REMATCH[1]}"
+      else
+        fail "resolve current NixOS generation"
+      fi
+      if [[ "$old_profile_system" != "$old_system" ]]; then
+        fail "active system and persistent profile differ before validation"
+      fi
+      log "recovery: generation $old_generation ($old_system)"
 
       if ! nix flake check "path:$source_path"; then
         fail "nix flake check"
@@ -345,17 +388,65 @@ let
       fi
 
       phase="activating"
-      if ! "$sudo" "$nixos_rebuild" switch --flake "path:$source_path#$host"; then
-        failure_summary="nixos-rebuild switch"
+      if ! NH_ELEVATION_STRATEGY="$sudo" "$nh" os test "$new_system"; then
+        failure_summary="nh os test"
         log "failed: $failure_summary"
-        if [[ "$(readlink -f /run/current-system)" != "$old_system" ]]; then
-          log "rollback: restoring previous NixOS generation"
-          if ! "$sudo" "$nixos_rebuild" switch --rollback; then
-            phase="preserve"
-            failure_summary="nixos-rebuild switch failed and rollback failed; update change preserved for manual recovery"
-            log "critical: $failure_summary"
-            exit 1
-          fi
+        if ! restore_exact_generation; then
+          phase="preserve"
+          failure_summary="nh os test failed and exact recovery failed; update change preserved for manual recovery"
+          log "critical: $failure_summary"
+          exit 1
+        fi
+        phase="validating"
+        exit 1
+      fi
+      if [[ "$(readlink -f /run/current-system)" != "$new_system" ]]; then
+        failure_summary="nh os test did not activate the exact built system"
+        log "failed: $failure_summary"
+        if ! restore_exact_generation; then
+          phase="preserve"
+          failure_summary="$failure_summary and exact recovery failed; update change preserved for manual recovery"
+          log "critical: $failure_summary"
+          exit 1
+        fi
+        phase="validating"
+        exit 1
+      fi
+      if [[ "$(readlink -f /nix/var/nix/profiles/system)" != "$old_system" ]]; then
+        failure_summary="nh os test changed the persistent system profile"
+        log "failed: $failure_summary"
+        if ! restore_exact_generation; then
+          phase="preserve"
+          failure_summary="$failure_summary and exact recovery failed; update change preserved for manual recovery"
+          log "critical: $failure_summary"
+          exit 1
+        fi
+        phase="validating"
+        exit 1
+      fi
+      log "test: $new_system"
+
+      if ! NH_ELEVATION_STRATEGY="$sudo" "$nh" os switch "$new_system"; then
+        failure_summary="nh os switch"
+        log "failed: $failure_summary"
+        if ! restore_exact_generation; then
+          phase="preserve"
+          failure_summary="nh os switch failed and exact recovery failed; update change preserved for manual recovery"
+          log "critical: $failure_summary"
+          exit 1
+        fi
+        phase="validating"
+        exit 1
+      fi
+      if [[ "$(readlink -f /run/current-system)" != "$new_system" ]] \
+        || [[ "$(readlink -f /nix/var/nix/profiles/system)" != "$new_system" ]]; then
+        failure_summary="nh os switch did not activate the exact built system"
+        log "failed: $failure_summary"
+        if ! restore_exact_generation; then
+          phase="preserve"
+          failure_summary="$failure_summary and exact recovery failed; update change preserved for manual recovery"
+          log "critical: $failure_summary"
+          exit 1
         fi
         phase="validating"
         exit 1
