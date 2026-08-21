@@ -31,12 +31,13 @@ Without `-r`, `jj workspace add` creates the new `@` on the current
 working-copy commit's parents, not on the current `@`. Never rely on that
 default.
 
-Create the destination outside the repository tree, using an absolute,
-canonical path whose parent is dedicated to workspaces:
+Create the destination outside the repository tree at the shared canonical
+location `~/.jjworkspaces/<project-name>/<task-name>`. Use absolute paths in
+commands, replacing the placeholders with concise, stable names:
 
 ```bash
 jj workspace add --name <task-name> -r <base-change-id> \
-  /absolute/path/outside/nix-config/<task-name>
+  /home/<user>/.jjworkspaces/<project-name>/<task-name>
 jj workspace list
 ```
 
