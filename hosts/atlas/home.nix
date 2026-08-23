@@ -4,6 +4,7 @@
   codexPackage,
   nix-index-database,
   nixvim,
+  sops-nix,
   ...
 }:
 
@@ -12,10 +13,12 @@
     imports = [
       nix-index-database.homeModules.default
       nixvim.homeModules.nixvim
+      sops-nix.homeManagerModules.sops
       ../../modules/home/bundles/terminal.nix
       ../../modules/home/bundles/desktop.nix
       ../../modules/home/development-tools.nix
       ../../modules/home/clash-verge.nix
+      ../../modules/home/secrets.nix
     ];
 
     home = {

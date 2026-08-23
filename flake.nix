@@ -23,6 +23,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # 用户级 secret 由 sops-nix 解密，软件集与根 nixpkgs 保持一致。
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Nixvim 使用上游锁定并测试的 nixpkgs revision。
     nixvim.url = "github:nix-community/nixvim/main";
 
@@ -47,6 +53,7 @@
       nix-index-database,
       nixvim,
       nixos-wsl,
+      sops-nix,
       llm-agents,
       ...
     }:
@@ -85,6 +92,7 @@
             home-manager
             nix-index-database
             nixvim
+            sops-nix
             ;
         };
         modules = [ ./hosts/atlas ];
