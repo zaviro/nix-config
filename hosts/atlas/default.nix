@@ -41,10 +41,6 @@
       "systemd"
     ];
   };
-  nix.settings = {
-    substituters = [ "https://zaviro.cachix.org" ];
-    trusted-public-keys = [ "zaviro.cachix.org-1:koPLwQieJmtDIjefrLW0lDp2jtDtX16LZ2jyugi/kYc=" ];
-  };
   nix.optimise.automatic = true;
   programs.zsh.enable = true;
   programs.steam.enable = true;
