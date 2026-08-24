@@ -76,6 +76,14 @@ that orchestration inline. Read
 [activation-and-rollback.md](references/activation-and-rollback.md) for both
 modes and staged transaction recovery.
 
+For changes that can alter Clash Verge profile inputs, generated configuration,
+DNS, rules, proxy selection, routing, TUN behavior, UI, or running core, also use
+[`$clash-verge-runtime-change`](../clash-verge-runtime-change/SKILL.md). That
+skill owns isolated Mihomo evidence, complete UI reload, application health, and
+runtime-aware recovery; this skill retains Nix validation, exact generation
+transactions, and `guarded-activate`. Do not invoke the Clash-specific skill for
+unrelated `finish-nix-change` work.
+
 ## Recheck after history or tree changes
 
 If `$jj-guide` splits, squashes, rebases, resolves conflicts, or otherwise

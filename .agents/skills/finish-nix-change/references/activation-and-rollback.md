@@ -61,6 +61,13 @@ When verification deliberately disrupts service or connectivity state, record
 that state before disruption, restore it on failure, and include state-specific
 behavior and control-channel checks in the protected invocation.
 
+Application-owned generated runtime state may require an additional reload
+after both target deployment and recovery. Follow the application-specific
+skill routed from the entrypoint; for Clash Verge, use
+[`$clash-verge-runtime-change`](../../clash-verge-runtime-change/SKILL.md).
+That skill defines the application restart and runtime health while this
+reference remains the authority for the NixOS generation transaction.
+
 ## Record the recovery point
 
 Receive the exact `system_toplevel` store path printed by the completed build.

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Clash Verge Runtime Change"
+  short_description: "Safely validate and reload Clash Verge network changes"
