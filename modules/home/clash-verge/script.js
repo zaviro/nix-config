@@ -16,7 +16,7 @@ const AI_EXCLUDE_RE =
 const GOOGLE_EXCLUDE_RE =
   INFO_NODE_RE + "|(?i)(俄罗斯|russia)";
 
-// 个人规则放在公共规则集之前；wenku8.net 及其子域名始终直连。
+// 个人规则只表达本机策略；公共域名/IP 分类统一交给 MetaCubeX/meta-rules-dat。
 const CUSTOM_RULES = [
   "DOMAIN-SUFFIX,wenku8.net,DIRECT",
 ];
@@ -39,7 +39,7 @@ const GOOGLE_RULES = [
   "DOMAIN-REGEX,(^|\\.)google\\.[a-z.]+$," + GROUP.GOOGLE,
 ];
 
-const RULESET_BASE =
+const META_RULESET_BASE =
   "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/";
 
 function domainProvider(fileName) {
@@ -48,7 +48,7 @@ function domainProvider(fileName) {
     behavior: "domain",
     format: "mrs",
     interval: 86400,
-    url: RULESET_BASE + "geosite/" + fileName + ".mrs",
+    url: META_RULESET_BASE + "geosite/" + fileName + ".mrs",
     path: "./ruleset/" + fileName + ".mrs",
     proxy: GROUP.PROXY,
   };
@@ -60,7 +60,7 @@ function ipProvider(fileName) {
     behavior: "ipcidr",
     format: "mrs",
     interval: 86400,
-    url: RULESET_BASE + "geoip/" + fileName + ".mrs",
+    url: META_RULESET_BASE + "geoip/" + fileName + ".mrs",
     path: "./ruleset/" + fileName + "_ip.mrs",
     proxy: GROUP.PROXY,
   };
@@ -149,7 +149,6 @@ const MANAGED_RULES = INFRA_RULES.concat(
     "RULE-SET,cn_domain,DIRECT",
     "RULE-SET,not_cn_domain," + GROUP.PROXY,
     "RULE-SET,cn_ip,DIRECT",
-    "GEOIP,CN,DIRECT",
     "MATCH," + GROUP.PROXY,
   ]
 );

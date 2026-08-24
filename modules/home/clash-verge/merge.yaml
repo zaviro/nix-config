@@ -1,4 +1,5 @@
-# Clash Verge Rev 全局扩展配置：本机路由与 DNS。
+# Clash Verge Rev 全局扩展配置：Mihomo 机制层。
+# 域名/IP 分类由 script.js 中的 MetaCubeX/meta-rules-dat providers 提供。
 
 profile:
   store-selected: true
@@ -26,24 +27,22 @@ tun:
 dns:
   enable: true
   listen: 127.0.0.1:1053
+  cache-algorithm: arc
+  prefer-h3: false
   respect-rules: true
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
+  # 默认使用境外 DoH，并通过当前“节点选择”出口查询。
   nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-  fallback:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
+    - "https://1.1.1.1/dns-query#节点选择"
+    - "https://8.8.8.8/dns-query#节点选择"
+  # 代理节点域名使用国内解析，避免解析代理本身时形成循环依赖。
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
-  fallback-filter:
-    geoip: true
-    geoip-code: CN
   nameserver-policy:
-    # Google服务 由 script.js 生成；规则集和关键域名共用同一持久化手动出口。
+    # Google DNS 与实际流量使用同一持久化手动出口；显式域名在规则集尚未就绪时兜底。
     "rule-set:google": "https://1.1.1.1/dns-query#Google服务"
     "+.google.com": "https://1.1.1.1/dns-query#Google服务"
     "+.google.com.hk": "https://1.1.1.1/dns-query#Google服务"
@@ -58,3 +57,7 @@ dns:
     "+.ggpht.com": "https://1.1.1.1/dns-query#Google服务"
     "+.googletagmanager.com": "https://1.1.1.1/dns-query#Google服务"
     "+.google-analytics.com": "https://1.1.1.1/dns-query#Google服务"
+    # 国内域名由 MetaCubeX 分类后使用国内 DoH；其余域名落到上面的默认境外 DoH。
+    "rule-set:cn_domain":
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
