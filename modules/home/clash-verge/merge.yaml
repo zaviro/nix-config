@@ -1,6 +1,8 @@
 # Clash Verge Rev 全局扩展配置：Mihomo 机制层。
 # 域名/IP 分类由 script.js 中的 MetaCubeX/meta-rules-dat providers 提供。
 
+tcp-concurrent: true
+
 profile:
   store-selected: true
 
