@@ -23,7 +23,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # 用户级 secret 由 sops-nix 解密，软件集与根 nixpkgs 保持一致。
+    # 系统级与用户级 secret 均由 sops-nix 解密，软件集与根 nixpkgs 保持一致。
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";

@@ -495,6 +495,7 @@ in
   config = lib.mkIf cfg.enable {
     systemd.services.nixos-flake-update = {
       description = "Update, validate, and activate Nix flake inputs";
+      environment.HOME = config.users.users.${cfg.user}.home;
       restartIfChanged = false;
       stopIfChanged = false;
       unitConfig.X-StopOnRemoval = false;

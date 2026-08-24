@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  osConfig,
   pkgs,
   ...
 }:
@@ -30,6 +31,10 @@ let
 in
 
 {
+  nix.extraOptions = ''
+    !include ${osConfig.sops.templates."nix-access-tokens.conf".path}
+  '';
+
   home.packages = with pkgs; [
     age
     cachix

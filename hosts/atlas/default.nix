@@ -12,6 +12,7 @@
     home-manager.nixosModules.home-manager
     ../../modules/nixos/bundles/maintenance.nix
     ../../modules/nixos/bundles/desktop.nix
+    ../../modules/nixos/secrets.nix
     ./access.nix
     ./boot.nix
     ./clash-verge.nix
