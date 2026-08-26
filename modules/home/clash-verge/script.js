@@ -5,6 +5,7 @@ const GROUP = {
   AI: "AI服务",
   AI_AUTO: "AI自动选择",
   GOOGLE: "Google服务",
+  GOOGLE_FALLBACK: "Google故障转移",
 };
 
 const INFO_NODE_RE =
@@ -118,9 +119,11 @@ const PROXY_GROUPS = [
   {
     name: GROUP.GOOGLE,
     type: "select",
+    proxies: [GROUP.GOOGLE_FALLBACK],
     "include-all": true,
     "exclude-filter": GOOGLE_EXCLUDE_RE,
   },
+  healthGroup(GROUP.GOOGLE_FALLBACK, "fallback", GOOGLE_EXCLUDE_RE),
 ];
 
 const INFRA_RULES = [
