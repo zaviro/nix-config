@@ -281,6 +281,11 @@ sudo nix-env --profile /nix/var/nix/profiles/system \
 sudo "$recovery_link/bin/switch-to-configuration" switch
 ```
 
+If a task-owned candidate already synchronized to `next` fails after `switch`,
+recovery is complete only after restoring the runtime generation and using
+Jujutsu to align the task-owned source and `next` with that generation's
+verified tree.
+
 Stop and report immediately if rollback fails. Do not improvise a Disko,
 bootloader, network, or destructive recovery.
 
