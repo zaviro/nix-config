@@ -64,9 +64,17 @@
       codexPackage = llm-agents.packages.${system}.codex;
       chatgptPackage = llm-agents.packages.${system}.chatgpt;
 
+      rescueIso = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit claudeCodePackage; };
+        modules = [ ./images/rescue-iso ];
+      };
+
     in
     {
       formatter.${system} = pkgs.nixfmt-tree;
+
+      packages.${system}.rescue-iso = rescueIso.config.system.build.isoImage;
 
       nixosConfigurations."legion-wsl" = nixpkgs.lib.nixosSystem {
         inherit system;
