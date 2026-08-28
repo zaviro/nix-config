@@ -5,6 +5,7 @@
     device = "/dev/disk/by-uuid/000839b1-7b82-4c8d-8691-c5758e41ab31";
     fsType = "btrfs";
     options = [
+      "subvol=@data"
       "compress=zstd:1"
       "nofail"
       "x-systemd.automount"
