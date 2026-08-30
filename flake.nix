@@ -60,6 +60,7 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+      windowKeybindings = pkgs.callPackage ./pkgs/window-keybindings { };
       claudeCodePackage = llm-agents.packages.${system}.claude-code;
       codexPackage = llm-agents.packages.${system}.codex;
       chatgptPackage = llm-agents.packages.${system}.chatgpt;
@@ -74,7 +75,27 @@
     {
       formatter.${system} = pkgs.nixfmt-tree;
 
-      packages.${system}.rescue-iso = rescueIso.config.system.build.isoImage;
+      packages.${system} = {
+        rescue-iso = rescueIso.config.system.build.isoImage;
+        window-keybindings = windowKeybindings;
+      };
+
+      checks.${system}.window-keybindings =
+        pkgs.runCommand "window-keybindings-tests"
+          {
+            nativeBuildInputs = [
+              pkgs.bash
+              pkgs.coreutils
+              pkgs.gnugrep
+              pkgs.gnused
+              pkgs.jq
+              pkgs.util-linux
+            ];
+          }
+          ''
+            ${pkgs.bash}/bin/bash ${./pkgs/window-keybindings}/tests/test.sh
+            touch "$out"
+          '';
 
       nixosConfigurations."legion-wsl" = nixpkgs.lib.nixosSystem {
         inherit system;
