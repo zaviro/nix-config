@@ -1,5 +1,8 @@
 # Upstream References
 
+> 本文保存规范形成过程中的上游调研与历史比较，可能包含已被后续版本否决的候选方案。
+> 当前语义以 `SPEC.md` 的 v0.7 为准，当前主机配置以部署模块为准。
+
 本文记录本规范借鉴的**现有快捷键语义与 compositor 能力**。目的不是证明存在某个统一标准，而是区分：
 
 - 已经被成熟桌面反复验证的交互习惯；
@@ -95,6 +98,9 @@ Alt+Shift+Tab
 Mod+Tab
 Mod+Shift+Tab
 ```
+
+这些 binding 是配置解析器注入的隐式默认，因此不出现在 `default-config.kdl`。普通
+`binds` 的优先级高于 recent-window binds；部署层必须避免用普通 `Mod+Tab` 覆盖它。
 
 并可按：
 
@@ -282,14 +288,16 @@ Alt+Tab   → window switcher
 
 ### 对本规范的影响
 
-`Mod+Space` 是非常合适的最高频搜索入口：
+> 以下 `Mod+Space` 结论是 v0.1 的历史候选；v0.2 起已否决，v0.7 使用 `Mod+D`。
+
+当时曾把 `Mod+Space` 视为合适的最高频搜索入口：
 
 - 键位大；
 - 易触发；
 - 已是 Noctalia launcher 的推荐入口；
 - 不占用角色字母。
 
-本规范把它从单纯 app launcher 提升成：
+早期草案曾计划把它从单纯 app launcher 提升成：
 
 > **统一对象搜索：role / window / workspace / application。**
 
@@ -319,7 +327,10 @@ scratchpad/special workspace
 
 ---
 
-## 本规范的核心新组合
+## 早期规范的核心组合（历史记录）
+
+> v0.7 只保留 Role-first、search 与 recent-window 方向；下方 Global Main、
+> `Alt = global-main` 与 `Shift = compose` 均已否决。
 
 ### 1. Role-first
 
@@ -335,7 +346,7 @@ spawn firefox
 
 而是稳定的 role slot：focus if exists, otherwise create。
 
-### 2. `Alt = global-main scope`
+### 2. `Alt = global-main scope`（已否决）
 
 ```text
 Mod+B     local browser
@@ -344,18 +355,19 @@ Mod+Alt+B global-main browser
 
 把作用域做成可组合语法。
 
-### 3. Global Main roaming
+### 3. Global Main roaming（已否决）
 
 不是把用户送去主实例所在地，而是把主实例召回当前 workspace。
 
-### 4. `Shift = compose`
+### 4. `Shift = compose`（已否决）
 
 ```text
 Mod+B       switch/focus browser
 Mod+Shift+B preserve current + show browser beside it
 ```
 
-把“选择对象”和“如何呈现对象”拆成两个正交维度。
+早期草案曾尝试把“选择对象”和“如何呈现对象”拆成两个正交维度；v0.7 未采用这组
+binding，不应据此实现 `Mod+Shift+Role`。
 
 ### 5. Search-first long tail
 

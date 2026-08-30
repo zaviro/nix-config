@@ -1,0 +1,6 @@
+// Reference only. The executable must be installed or replaced with its
+// absolute Nix store path by the deployment layer.
+binds {
+    Mod+B { spawn "window-keybindings" "contextual" "browser" "^example[.]Browser$" "--" "example-browser"; }
+    Mod+A { spawn "window-keybindings" "singleton" "agent" "^example[.]Agent$" "--" "example-agent"; }
+}
