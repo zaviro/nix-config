@@ -6,10 +6,12 @@
     google-chrome
     mpv
     obsidian
+    qq
     readest
     rustdesk
     spotify
     tauon
+    wechat
     yt-dlp
   ];
 

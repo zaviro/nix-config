@@ -53,9 +53,11 @@
       "google-chrome"
       "libsciter"
       "obsidian"
+      "qq"
       "spotify"
       "steam"
       "steam-unwrapped"
+      "wechat"
       "zsh-abbr"
     ];
 
