@@ -44,7 +44,10 @@
   };
   nix.optimise.automatic = true;
   programs.zsh.enable = true;
-  programs.steam.enable = true;
+  programs.steam = {
+    enable = true;
+    extraCompatPackages = [ pkgs.proton-ge-bin ];
+  };
   virtualisation.docker.enable = true;
 
   nixpkgs.config.allowUnfreePredicate =

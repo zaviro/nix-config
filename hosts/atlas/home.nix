@@ -4,6 +4,7 @@
   codexPackage,
   nix-index-database,
   nixvim,
+  pkgs,
   sops-nix,
   ...
 }:
@@ -35,6 +36,14 @@
     programs.home-manager.enable = true;
     programs.nix-index.enable = true;
     programs.nix-index-database.comma.enable = true;
+    programs.lutris = {
+      enable = true;
+      extraPackages = [
+        pkgs.umu-launcher
+        pkgs.winetricks
+      ];
+      winePackages = [ pkgs.wineWow64Packages.full ];
+    };
     programs.nh = {
       enable = true;
       osFlake = "/home/zaviro/nix-config";
