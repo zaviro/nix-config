@@ -6,6 +6,7 @@
     type = "fcitx5";
     fcitx5 = {
       addons = with pkgs; [
+        fcitx5-lua
         fcitx5-rime
         qt6Packages.fcitx5-chinese-addons
       ];
