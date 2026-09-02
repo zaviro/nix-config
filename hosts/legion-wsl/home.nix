@@ -3,8 +3,8 @@
 {
   home-manager.users.zaviro = {
     imports = [
-      ../../modules/home/git.nix
-      ../../modules/home/tmux.nix
+      ../../modules/git.nix
+      ../../modules/tmux.nix
     ];
 
     home = {

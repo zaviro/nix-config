@@ -7,7 +7,7 @@
 
 let
   # This module is the only writer of niri/config.kdl. It serializes the
-  # resolved policy from keybindings.nix and retains niri's upstream defaults.
+  # resolved window-keybindings policy and retains niri's upstream defaults.
   renderBool = value: if value then "true" else "false";
   renderBinding =
     binding:

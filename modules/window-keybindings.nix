@@ -8,8 +8,8 @@
 let
   # The package owns the reference semantics; this is Atlas's only deployment
   # adapter, where abstract roles receive real app_ids and launch commands.
-  referenceProfile = import ../../pkgs/window-keybindings/profiles/v0_7.nix;
-  windowKeybindings = pkgs.callPackage ../../pkgs/window-keybindings { };
+  referenceProfile = import ../pkgs/window-keybindings/profiles/v0_7.nix;
+  windowKeybindings = pkgs.callPackage ../pkgs/window-keybindings { };
   helper = lib.getExe windowKeybindings;
 
   bindingType = lib.types.submodule {

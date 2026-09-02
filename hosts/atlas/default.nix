@@ -10,12 +10,12 @@
   imports = [
     disko.nixosModules.disko
     home-manager.nixosModules.home-manager
-    ../../modules/nixos/bundles/maintenance.nix
-    ../../modules/nixos/bundles/desktop.nix
-    ../../modules/nixos/secrets.nix
+    ../../bundles/maintenance.nix
+    ../../bundles/desktop/nixos.nix
+    ../../modules/clash-verge/nixos.nix
+    ../../modules/secrets/nixos.nix
     ./access.nix
     ./boot.nix
-    ./clash-verge.nix
     ./disko.nix
     ./hardware-configuration.nix
     ./home.nix

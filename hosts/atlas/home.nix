@@ -15,11 +15,11 @@
       nix-index-database.homeModules.default
       nixvim.homeModules.nixvim
       sops-nix.homeManagerModules.sops
-      ../../modules/home/bundles/terminal.nix
-      ../../modules/home/bundles/desktop.nix
-      ../../modules/home/development-tools.nix
-      ../../modules/home/clash-verge.nix
-      ../../modules/home/secrets.nix
+      ../../bundles/terminal.nix
+      ../../bundles/desktop/home.nix
+      ../../modules/clash-verge/home.nix
+      ../../modules/development-tools.nix
+      ../../modules/secrets/home.nix
     ];
 
     home = {

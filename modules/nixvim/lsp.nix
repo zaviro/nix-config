@@ -1,7 +1,7 @@
 { lib, pkgs, ... }:
 
 let
-  nixLspDispatch = pkgs.callPackage ../../../pkgs/nix-lsp-dispatch.nix { };
+  nixLspDispatch = pkgs.callPackage ../../pkgs/nix-lsp-dispatch.nix { };
 in
 {
   plugins.lspconfig.enable = true;

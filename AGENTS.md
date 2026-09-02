@@ -10,8 +10,14 @@
 - `hosts/<host>/default.nix` 是主机系统的 composition root。
 - `hosts/<host>/home.nix` 是该主机的 Home Manager composition root，声明用户身份、
   主机选择和主机专属包。
-- `modules/nixos/` 与 `modules/home/` 是可复用能力；`bundles/` 只表达稳定意图，
-  只导入同层静态模块，不嵌套 bundle。
+- `modules/` 按功能而非 evaluator 分类。单一入口且无附属资源的功能使用
+  `modules/<feature>.nix`；跨 evaluator 或需要共置资源、内部子模块的功能使用
+  `modules/<feature>/`，并在内部按需提供 `nixos.nix`、`home.nix`、`darwin.nix` 等入口。
+  跨 evaluator 目录不提供混合各入口的 `default.nix`；调用方必须显式选择入口，且不同
+  evaluator 入口不得互相导入。
+- `bundles/` 只表达稳定角色意图；单一 evaluator 的角色使用 `bundles/<role>.nix`，
+  跨 evaluator 的角色使用 `bundles/<role>/<evaluator>.nix`。每个入口只导入对应
+  evaluator 的静态 module，不嵌套 bundle。
 - 主机实例直接导入单一 module；共同变更原因才拆为主机 fragment。
 - 依赖方向为 `host -> bundle -> module`；module 不反向导入 host。
 - `flake.nix` 只负责 inputs、输出和依赖注入，不组合具体主机功能。
@@ -20,9 +26,9 @@
 
 | 内容 | 位置 |
 | --- | --- |
-| 系统能力 | `modules/nixos/` |
-| 用户能力 | `modules/home/` |
-| 稳定能力集合 | 对应目录的 `bundles/` |
+| 功能实现 | `modules/<feature>.nix` 或 `modules/<feature>/` |
+| 功能的 evaluator 入口 | `modules/<feature>/<evaluator>.nix` |
+| 稳定角色集合 | `bundles/<role>.nix` 或 `bundles/<role>/<evaluator>.nix` |
 | 主机策略/硬件/磁盘 | `hosts/<host>/` |
 | 主机用户选择与身份 | `hosts/<host>/home.nix` |
 

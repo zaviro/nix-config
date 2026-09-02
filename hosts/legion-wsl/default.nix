@@ -8,8 +8,8 @@
   imports = [
     nixos-wsl.nixosModules.default
     home-manager.nixosModules.home-manager
-    ../../modules/nixos/bundles/maintenance.nix
-    ../../modules/nixos/tailscale.nix
+    ../../bundles/maintenance.nix
+    ../../modules/tailscale.nix
     ./home.nix
   ];
 

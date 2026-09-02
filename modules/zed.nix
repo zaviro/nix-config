@@ -1,7 +1,7 @@
 { pkgs, ... }:
 
 let
-  nixLspDispatch = pkgs.callPackage ../../pkgs/nix-lsp-dispatch.nix { };
+  nixLspDispatch = pkgs.callPackage ../pkgs/nix-lsp-dispatch.nix { };
 in
 {
   programs.zed-editor = {

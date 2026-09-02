@@ -117,6 +117,6 @@
     };
   };
 
-  xdg.dataFile."fcitx5/rime/default.yaml".source = ./fcitx5/rime/default.yaml;
-  xdg.dataFile."fcitx5/rime/default.custom.yaml".source = ./fcitx5/rime/default.custom.yaml;
+  xdg.dataFile."fcitx5/rime/default.yaml".source = ./rime/default.yaml;
+  xdg.dataFile."fcitx5/rime/default.custom.yaml".source = ./rime/default.custom.yaml;
 }

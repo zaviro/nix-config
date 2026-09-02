@@ -73,7 +73,7 @@ explicit filesets for non-trivial selection:
 | Fileset | Meaning |
 | --- | --- |
 | `path/to/file.nix` | One path |
-| `root:modules/home` | Repository-root-relative subtree |
+| `root:modules/niri` | Repository-root-relative subtree |
 | `glob:modules/**/*.nix` | Glob pattern |
 | `x | y` | Union |
 | `x & y` | Intersection |
