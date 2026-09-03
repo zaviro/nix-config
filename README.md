@@ -1,13 +1,17 @@
 # zaviro NixOS configuration
 
-这是一个多主机 NixOS Flake，公开两个系统输出：
+个人多主机 NixOS 配置，使用 Flake，并将 Home Manager 嵌入 NixOS。
 
-- `atlas`：日常使用的物理机，包含桌面、图形应用、容器和 Disko 布局声明。
-- `legion-wsl`：通过 Tailscale/SSH 使用的轻量 WSL 环境。
+## 主机
 
-系统配置位于 `hosts/`，可复用 NixOS 能力位于 `modules/nixos/`，可复用 Home
-Manager 能力位于 `modules/home/`。每台主机通过自己的 `home.nix` 组合用户配置，
-不暴露独立的 `homeConfigurations`。
+- `atlas`：日常使用的物理机。
+- `legion-wsl`：通过 Tailscale/SSH 使用的 WSL 环境。
 
-仓库编辑完成后的验证、激活、change 整理和发布规则见
-[`done-any-edit` skill](.agents/skills/done-any-edit/SKILL.md)。
+## 仓库结构
+
+- `hosts/`：主机组合与主机专属策略。
+- `modules/`：按功能组织的可复用配置。
+- `bundles/`：供主机选择的稳定角色组合。
+
+公开 Flake 接口包括 `nixosConfigurations.atlas`、
+`nixosConfigurations.legion-wsl`、`rescue-iso` 和 `window-keybindings`。

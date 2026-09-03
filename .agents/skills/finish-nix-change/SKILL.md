@@ -26,8 +26,12 @@ or an unresolved ownership boundary and return to `$jj-guide`.
 
 Check documentation impact before validation:
 
-- Update `README.md` only when human-facing repository facts, public flake
-  interfaces, major capabilities, or operating entrypoints changed.
+- Treat `README.md` as the stable landing page for this personal configuration
+  repository. Keep only its identity, managed hosts, high-level layout, stable
+  public Flake outputs, and any minimal entrypoint needed to begin using it.
+  Update it only when one of those facts changes. Do not add internal
+  implementation, maintenance or troubleshooting commands, validation or agent
+  workflow, per-feature operating detail, or pure-refactor layout detail.
 - Update `AGENTS.md` only when stable repository structure, authorization, or
   mandatory routing changed.
 - Update a skill only when its task-specific workflow or knowledge changed.

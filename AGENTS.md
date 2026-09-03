@@ -101,5 +101,5 @@ change 边界按维护者可能合理地作为不同步骤落地、保留或回�
 [`$finish-nix-change` skill](.agents/skills/finish-nix-change/SKILL.md)。它负责格式化、
 验证、构建、风险激活、行为验证以及 activation recovery/rollback；Jujutsu change
 ownership、历史与冲突处理、operation recovery、workspace、bookmark 和远端操作由
-`$jj-guide` 负责。README 面向使用者记录公开事实，AGENTS.md 记录常驻政策，skills
-记录按需工作流，三处不得复制易漂移的命令细节。
+`$jj-guide` 负责。README 仅作为仓库稳定入口页；具体边界由 `$finish-nix-change`
+负责。AGENTS.md 记录常驻政策，skills 记录按需工作流，三处不得复制易漂移的命令细节。
