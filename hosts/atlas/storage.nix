@@ -1,3 +1,8 @@
+{ pkgs, ... }:
+
+let
+  dataHdd = "/dev/disk/by-id/ata-ST6000DM003-2U9186_ZR1532CA";
+in
 {
   fileSystems."/var/log".neededForBoot = true;
 
@@ -10,6 +15,17 @@
       "nofail"
       "x-systemd.automount"
     ];
+  };
+
+  systemd.services.data-hdd-standby = {
+    description = "Set the data HDD standby timeout";
+    wantedBy = [ "multi-user.target" ];
+    unitConfig.ConditionPathExists = dataHdd;
+
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.hdparm}/bin/hdparm -S 241 ${dataHdd}";
+    };
   };
 
   services.snapper = {
