@@ -52,7 +52,7 @@ let
       command = [
         "google-chrome"
         "--new-window"
-        "about:blank"
+        "chrome://newtab"
       ];
       title = "Browser in Current Workspace";
     };
