@@ -70,11 +70,11 @@ switcher:
 # set_ascii_mode   切换到英文模式
 # unset_ascii_mode 切换到中文模式
 ascii_composer:
-  good_old_caps_lock: false  # CapsLock 由 Fcitx5 负责切换中英文
+  good_old_caps_lock: true   # CapsLock 仅保留系统大小写锁定语义
   switch_key:
-    Caps_Lock: noop      # Fcitx5 捕获 CapsLock；Rime 不再处理
+    Caps_Lock: noop       # Rime 不处理，由 XKB 负责大小写锁定
     Shift_L: noop         # 禁止左 Shift 切换中英文
-    Shift_R: noop         # 禁止右 Shift 切换中英文
+    Shift_R: noop         # 由 Fcitx5 全局快捷键负责切换中英文
     Control_L: noop       # commit_code | commit_text | inline_ascii | clear | noop | set_ascii_mode | unset_ascii_mode
     Control_R: noop       # commit_code | commit_text | inline_ascii | clear | noop | set_ascii_mode | unset_ascii_mode
 

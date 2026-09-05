@@ -38,14 +38,10 @@
           EnumerateSkipFirst = false;
         };
 
-        # CapsLock is reserved for switching Chinese/English in Fcitx5.
-        # Known limitation: its input-method state can still become out of sync
-        # with the keyboard's case state. Keep this mapping for now; resolving
-        # that mismatch needs a separate investigation.
-        # The Niri/XKB layer intentionally keeps Shift+CapsLock available
-        # for the system's case-lock toggle; do not treat Caps_Lock: noop in
-        # Rime as disabling that lower-level XKB behavior.
-        "Hotkey/TriggerKeys"."0" = "Caps_Lock";
+        # Right Shift exclusively switches Chinese/English in Fcitx5. CapsLock
+        # remains owned by XKB as the ordinary case-lock toggle, so the input
+        # method and case-lock state cannot be toggled together by one key.
+        "Hotkey/TriggerKeys"."0" = "Shift_R";
         "Hotkey/EnumerateGroupForwardKeys"."0" = "Super+space";
         "Hotkey/EnumerateGroupBackwardKeys"."0" = "Shift+Super+space";
         "Hotkey/ActivateKeys"."0" = "Hangul_Hanja";
